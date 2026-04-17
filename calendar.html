@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>訪問鍼灸 カレンダー</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+var _db = null;
+try {
+  if (!firebase.apps.length) {
+    firebase.initializeApp({
+      apiKey:            'AIzaSyC4CbzYPHUj3BQ_X2cS2dVg9UixGiCpO6A',
+      authDomain:        'ho-mon.firebaseapp.com',
+      projectId:         'ho-mon',
+      storageBucket:     'ho-mon.firebasestorage.app',
+      messagingSenderId: '856550721728',
+      appId:             '1:856550721728:web:75de566fb602691b6fc525'
+    });
+  }
+  _db = firebase.firestore();
+  console.log('[Firebase] 初期化完了');
+} catch(e) {
+  console.error('[Firebase] 初期化失敗', e);
+}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;background:#f0ede8;color:#1c1a18;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px}
+:root{
+  --ink:#1c1a18;--ink2:#5c5a56;--ink3:#9c9a96;
+  --paper:#ffffff;--paper2:#f7f5f1;--paper3:#f0ede8;
+  --border:#dedad4;--border2:#c8c4bc;
+  --pine:#1a5c3e;--pine-mid:#247a52;--pine-pale:#e6f2ec;--pine-pale2:#d0e9da;
+  --amber:#b86820;--amber-pale:#fdf0e4;
+  --red:#9c2c1a;--red-pale:#fdecea;
+  --r:10px;--r-sm:7px;
+  --shadow:0 2px 8px rgba(0,0,0,.09);--shadow-sm:0 1px 4px rgba(0,0,0,.07);
+}
+
+/* ── エリア色定義 ── */
+:root{
+  --area-K:#2d7a3a;   /* 北区：緑 */
+  --area-K-pale:#e8f5ea;
+  --area-C:#b5006b;   /* 中央区：ピンク */
+  --area-C-pale:#fce4f0;
+  --area-M:#1a487a;   /* 宮の沢？：青 */
+  --area-M-pale:#e3edf7;
+  --area-S:#7a5c00;   /* 札幌南？：黄土 */
+  --area-S-pale:#f5efd3;
+  --area-H:#6a1a6e;   /* 東区？：紫 */
+  --area-H-pale:#f2e4f5;
+  --area-T:#7a1a1a;   /* 豊平？：えんじ */
+  --area-T-pale:#f5e4e4;
+  --area-DEFAULT:#5c5a56;
+  --area-DEFAULT-pale:#f0ede8;
+}
+
+/* ── ヘッダー ── */
+#app-header{background:var(--pine);padding:14px 16px 12px;position:sticky;top:0;z-index:200}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.header-title{color:#fff;font-size:15px;font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.header-title-icon{width:22px;height:22px;background:rgba(255,255,255,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.view-toggle{display:flex;gap:4px}
+.view-btn{padding:6px 14px;border:1.5px solid rgba(255,255,255,.4);border-radius:20px;background:transparent;color:rgba(255,255,255,.75);font-size:12px;font-weight:700;transition:background .15s,color .15s}
+.view-btn.active{background:#fff;color:var(--pine);border-color:#fff}
+
+/* ── ナビゲーション ── */
+#cal-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--paper);border-bottom:1px solid var(--border);position:sticky;top:61px;z-index:100}
+.nav-btn{width:36px;height:36px;border:1.5px solid var(--border2);border-radius:50%;background:var(--paper);font-size:18px;display:flex;align-items:center;justify-content:center;transition:background .13s}
+.nav-btn:hover{background:var(--paper2)}
+#cal-label{font-size:16px;font-weight:700;color:var(--ink);cursor:pointer;padding:4px 12px;border-radius:20px;transition:background .13s}
+#cal-label:hover{background:var(--paper2)}
+.today-btn{padding:6px 14px;border:1.5px solid var(--border2);border-radius:20px;background:var(--paper);font-size:12px;font-weight:700;color:var(--ink2);transition:background .13s}
+.today-btn:hover{background:var(--pine-pale);border-color:var(--pine-mid);color:var(--pine)}
+
+/* ── 月カレンダー ── */
+#month-view{padding:0 8px 80px}
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.dow-header{display:grid;grid-template-columns:repeat(7,1fr);background:var(--paper);border-bottom:1px solid var(--border)}
+.dow-cell{text-align:center;padding:8px 0;font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.05em}
+.dow-cell:first-child{color:var(--red)}
+.dow-cell:last-child{color:#1a487a}
+
+.day-cell{min-height:80px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--paper);padding:4px 3px;position:relative;cursor:pointer;transition:background .1s;-webkit-tap-highlight-color:transparent}
+.day-cell:nth-child(7n){border-right:none}
+.day-cell.other-month .day-num{color:var(--ink3)}
+.day-cell.other-month{background:#faf9f7}
+.day-cell.is-today{background:var(--pine-pale)}
+.day-cell.is-today .day-num{color:var(--pine);font-weight:800}
+.day-cell.is-sun .day-num{color:var(--red)}
+.day-cell.is-sat .day-num{color:#1a487a}
+.day-cell:hover{background:var(--paper2)}
+.day-cell.is-today:hover{background:var(--pine-pale2)}
+.day-num{font-size:12px;font-weight:600;display:block;margin-bottom:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.day-cell.is-today .day-num{background:var(--pine);color:#fff}
+
+.event-chip{display:block;border-radius:4px;padding:2px 5px;font-size:10px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;cursor:pointer;transition:opacity .1s}
+.event-chip:hover{opacity:.85}
+.more-link{font-size:10px;color:var(--ink3);padding:1px 4px;font-weight:600;cursor:pointer}
+.more-link:hover{color:var(--pine)}
+
+/* ── 週カレンダー（table版） ── */
+#week-view{padding:0 0 80px;overflow-x:auto}
+#week-table{width:100%;border-collapse:collapse;min-width:380px;table-layout:fixed}
+#week-table th,#week-table td{border:1px solid var(--border)}
+#week-table thead th{background:var(--paper);text-align:center;padding:6px 2px}
+#week-table thead th.wt-corner{width:40px}
+.wt-day-name{font-size:11px;font-weight:700;color:var(--ink3);display:block}
+.wt-day-num{font-size:17px;font-weight:700;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px auto 0}
+.wt-head-today .wt-day-num{background:var(--pine);color:#fff}
+.wt-head-today .wt-day-name{color:var(--pine)}
+.wt-head-sun .wt-day-name{color:var(--red)}
+.wt-head-sun .wt-day-num{color:var(--red)}
+.wt-head-sat .wt-day-name{color:#1a487a}
+.wt-head-sat .wt-day-num{color:#1a487a}
+.wt-head-today .wt-day-num{color:#fff !important}
+#week-table td.wt-time{width:40px;font-size:10px;color:var(--ink3);text-align:right;padding:3px 4px 0 0;background:var(--paper);white-space:nowrap;vertical-align:top}
+#week-table td.wt-slot{height:54px;cursor:pointer;padding:2px;vertical-align:top;transition:background .1s}
+#week-table td.wt-slot:hover{background:var(--pine-pale)}
+.wt-event{display:block;border-radius:3px;padding:2px 4px;font-size:10px;font-weight:700;margin-bottom:1px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+.wt-event:hover{opacity:.82}
+
+/* ── エリアカラー適用 ── */
+.area-K{background:var(--area-K);color:#fff}
+.area-K-pale{background:var(--area-K-pale);color:var(--area-K)}
+.area-C{background:var(--area-C);color:#fff}
+.area-C-pale{background:var(--area-C-pale);color:var(--area-C)}
+.area-M{background:var(--area-M);color:#fff}
+.area-M-pale{background:var(--area-M-pale);color:var(--area-M)}
+.area-S{background:var(--area-S);color:#fff}
+.area-S-pale{background:var(--area-S-pale);color:var(--area-S)}
+.area-H{background:var(--area-H);color:#fff}
+.area-H-pale{background:var(--area-H-pale);color:var(--area-H)}
+.area-T{background:var(--area-T);color:#fff}
+.area-T-pale{background:var(--area-T-pale);color:var(--area-T)}
+.area-DEFAULT{background:var(--area-DEFAULT);color:#fff}
+.area-DEFAULT-pale{background:var(--area-DEFAULT-pale);color:var(--area-DEFAULT)}
+
+/* ── FAB（予定追加ボタン） ── */
+#fab{position:fixed;bottom:24px;right:20px;width:56px;height:56px;background:var(--pine);border:none;border-radius:50%;color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(26,92,62,.4);z-index:300;transition:transform .15s,background .15s}
+#fab:hover{background:var(--pine-mid);transform:scale(1.07)}
+#fab:active{transform:scale(.95)}
+
+/* ── モーダル共通 ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+@media(min-width:520px){.modal-overlay{align-items:center}}
+.modal{background:var(--paper);border-radius:var(--r) var(--r) 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+@media(min-width:520px){.modal{border-radius:var(--r);max-height:85vh}}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{width:32px;height:32px;border:none;background:var(--paper2);border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+.modal-close:hover{background:var(--border)}
+
+.fld{margin-bottom:16px}
+.fld:last-child{margin-bottom:0}
+.fld-label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px;letter-spacing:.03em}
+.fld-label .req{color:var(--red);margin-left:2px}
+select,input[type="text"],input[type="date"],input[type="time"],input[type="number"],textarea{
+  display:block;width:100%;padding:11px 12px;border:1.5px solid var(--border2);border-radius:var(--r-sm);
+  font-size:16px;color:var(--ink);background:var(--paper);outline:none;
+  transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none
+}
+select:focus,input:focus,textarea:focus{border-color:var(--pine-mid);box-shadow:0 0 0 3px var(--pine-pale)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%239c9a96' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:38px;cursor:pointer}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border:1.5px solid var(--border2);border-radius:var(--r-sm);font-size:15px;font-weight:700;background:var(--paper);color:var(--ink);transition:background .13s,transform .1s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn:hover{background:var(--paper2)}
+.btn-full{width:100%;padding:14px}
+.btn-pine{background:var(--pine);color:#fff;border-color:var(--pine)}
+.btn-pine:hover{background:var(--pine-mid)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-sm{padding:8px 14px;font-size:13px}
+.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
+
+/* ── イベント詳細モーダル ── */
+.event-detail-chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:14px;font-weight:700;margin-bottom:12px}
+.detail-row{font-size:14px;color:var(--ink2);padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:8px}
+.detail-row:last-of-type{border-bottom:none}
+.detail-row strong{color:var(--ink);min-width:60px;flex-shrink:0}
+
+/* ── ローディング ── */
+#loading{position:fixed;inset:0;background:#f0ede8;display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:12px}
+#loading.hide{display:none}
+.loading-dot{width:10px;height:10px;border-radius:50%;background:var(--pine);display:inline-block;animation:bounce .8s ease-in-out infinite}
+.loading-dots{display:flex;gap:8px;align-items:center}
+.loading-dots .loading-dot:nth-child(2){animation-delay:.15s}
+.loading-dots .loading-dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-8px);opacity:1}}
+.loading-text{font-size:13px;color:var(--ink3)}
+
+/* ── トースト ── */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+
+/* ── 月ジャンプピッカー ── */
+#month-picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:550;align-items:center;justify-content:center}
+#month-picker-overlay.open{display:flex}
+#month-picker{background:var(--paper);border-radius:var(--r);padding:20px;width:280px}
+#month-picker h3{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.mp-year-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:14px}
+.mp-year-btn{width:32px;height:32px;border:1.5px solid var(--border2);border-radius:50%;background:var(--paper);font-size:16px;display:flex;align-items:center;justify-content:center}
+.mp-year-btn:hover{background:var(--paper2)}
+#mp-year-label{font-size:16px;font-weight:700}
+.mp-months{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mp-month-btn{padding:10px 4px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:var(--paper);font-size:13px;font-weight:700;color:var(--ink2);transition:background .13s}
+.mp-month-btn:hover{background:var(--pine-pale);border-color:var(--pine-mid);color:var(--pine)}
+.mp-month-btn.selected{background:var(--pine);color:#fff;border-color:var(--pine)}
+
+/* ── 日別予定一覧モーダル ── */
+#daylist-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:flex-end;justify-content:center}
+#daylist-modal-overlay.open{display:flex}
+@media(min-width:520px){#daylist-modal-overlay{align-items:center}}
+#daylist-modal{background:var(--paper);border-radius:var(--r) var(--r) 0 0;padding:20px 16px 32px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
+@media(min-width:520px){#daylist-modal{border-radius:var(--r);max-height:82vh}}
+.daylist-event{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);margin-bottom:8px;cursor:pointer;transition:opacity .1s}
+.daylist-event:hover{opacity:.85}
+.daylist-event-time{font-size:13px;font-weight:700;min-width:38px;flex-shrink:0}
+.daylist-event-name{font-size:14px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daylist-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:1.5px dashed var(--border2);border-radius:var(--r-sm);background:transparent;color:var(--ink3);font-size:14px;font-weight:700;width:100%;margin-top:4px;transition:background .13s,border-color .13s,color .13s}
+.daylist-add-btn:hover{background:var(--pine-pale);border-color:var(--pine-mid);color:var(--pine)}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loading-dots">
+    <span class="loading-dot"></span>
+    <span class="loading-dot"></span>
+    <span class="loading-dot"></span>
+  </div>
+  <div class="loading-text">データを読み込み中…</div>
+</div>
+
+<!-- ヘッダー -->
+<div id="app-header">
+  <div class="header-row">
+    <div class="header-title">
+      <div class="header-title-icon">📅</div>
+      訪問スケジュール
+    </div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btn-month" onclick="switchView('month')">月</button>
+      <button class="view-btn" id="btn-week" onclick="switchView('week')">週</button>
+    </div>
+  </div>
+</div>
+
+<!-- ナビゲーション -->
+<div id="cal-nav">
+  <button class="nav-btn" onclick="navigate(-1)">‹</button>
+  <span id="cal-label" onclick="openMonthPicker()"></span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="today-btn" onclick="goToday()">今日</button>
+    <button class="nav-btn" onclick="navigate(1)">›</button>
+  </div>
+</div>
+
+<!-- 月ビュー -->
+<div id="month-view">
+  <div class="dow-header">
+    <div class="dow-cell">日</div>
+    <div class="dow-cell">月</div>
+    <div class="dow-cell">火</div>
+    <div class="dow-cell">水</div>
+    <div class="dow-cell">木</div>
+    <div class="dow-cell">金</div>
+    <div class="dow-cell">土</div>
+  </div>
+  <div class="month-grid" id="month-grid"></div>
+</div>
+
+<!-- 週ビュー（table版） -->
+<div id="week-view" style="display:none">
+  <table id="week-table">
+    <thead id="week-thead"><tr></tr></thead>
+    <tbody id="week-tbody"></tbody>
+  </table>
+</div>
+
+<!-- FAB -->
+<button id="fab" onclick="openAddModal(null)" title="予定を追加">＋</button>
+
+<!-- トースト -->
+<div id="toast"></div>
+
+<!-- ══ 予定追加/編集モーダル ══ -->
+<div class="modal-overlay" id="add-modal-overlay">
+  <div class="modal" id="add-modal">
+    <div class="modal-title">
+      <span id="modal-title-text">予定を追加</span>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+
+    <div class="fld">
+      <label class="fld-label">患者 <span class="req">*</span></label>
+      <select id="sel-patient">
+        <option value="">選択してください</option>
+      </select>
+    </div>
+
+    <div class="fld" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <label class="fld-label">日付 <span class="req">*</span></label>
+        <input type="date" id="inp-date">
+      </div>
+      <div>
+        <label class="fld-label">時間 <span class="req">*</span></label>
+        <input type="time" id="inp-time" value="10:00">
+      </div>
+    </div>
+
+    <div class="fld">
+      <label class="fld-label">メモ</label>
+      <textarea id="inp-memo" rows="2" placeholder="備考など"></textarea>
+    </div>
+
+    <hr class="sep">
+    <button class="btn btn-pine btn-full" onclick="saveSchedule()" id="save-btn">保存する</button>
+    <div id="edit-actions" style="display:none;margin-top:10px">
+      <hr class="sep" style="margin-top:0">
+      <button class="btn btn-red btn-full btn-sm" onclick="deleteSchedule()" style="margin-top:8px">この予定を削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 予定詳細モーダル ══ -->
+<div class="modal-overlay" id="detail-modal-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span>予定の詳細</span>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div id="detail-content"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-full" onclick="editFromDetail()" style="flex:1">編集</button>
+      <button class="btn btn-red" onclick="deleteFromDetail()" style="flex:1">削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 日別予定一覧モーダル ══ -->
+<div id="daylist-modal-overlay">
+  <div id="daylist-modal">
+    <div class="modal-title">
+      <span id="daylist-title"></span>
+      <button class="modal-close" onclick="closeDayList()">✕</button>
+    </div>
+    <div id="daylist-content"></div>
+    <button class="daylist-add-btn" id="daylist-add-btn" onclick="addFromDayList()">＋ この日に予定を追加</button>
+  </div>
+</div>
+
+<!-- ══ 月ジャンプピッカー ══ -->
+<div id="month-picker-overlay">
+  <div id="month-picker">
+    <h3>月を選択 <button class="modal-close" onclick="closeMonthPicker()">✕</button></h3>
+    <div class="mp-year-row">
+      <button class="mp-year-btn" onclick="mpYear(-1)">‹</button>
+      <span id="mp-year-label"></span>
+      <button class="mp-year-btn" onclick="mpYear(1)">›</button>
+    </div>
+    <div class="mp-months" id="mp-months"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   状態管理
+══════════════════════════════════════════ */
+var currentView = 'month';
+var today = new Date();
+var currentYear  = today.getFullYear();
+var currentMonth = today.getMonth(); // 0-indexed
+var currentWeekStart = getWeekStart(today);
+var mpPickYear = currentYear;
+
+var schedules  = []; // Firebaseから取得した予定一覧
+var patients   = []; // 名簿（名前・エリア）
+var editingId  = null; // 編集中の予定ID
+var detailId   = null; // 詳細表示中の予定ID
+
+/* エリアカラーマップ（追加・変更可能） */
+var AREA_COLORS = {
+  'K': 'area-K', 'C': 'area-C', 'M': 'area-M',
+  'S': 'area-S', 'H': 'area-H', 'T': 'area-T'
+};
+
+function areaClass(area) {
+  return AREA_COLORS[area] || 'area-DEFAULT';
+}
+
+/* ══════════════════════════════════════════
+   日付ユーティリティ
+══════════════════════════════════════════ */
+function toYMD(d) {
+  var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function fromYMD(s) {
+  var p = s.split('-');
+  return new Date(+p[0], +p[1]-1, +p[2]);
+}
+function getWeekStart(d) {
+  var dt = new Date(d);
+  dt.setDate(dt.getDate() - dt.getDay());
+  return dt;
+}
+function addDays(d, n) {
+  var dt = new Date(d);
+  dt.setDate(dt.getDate()+n);
+  return dt;
+}
+
+/* ══════════════════════════════════════════
+   Firebase
+══════════════════════════════════════════ */
+function loadAll() {
+  if (!_db) { hideLoading(); return; }
+
+  // 名簿を取得
+  _db.collection('patients').orderBy('id').get().then(function(snap) {
+    patients = [];
+    snap.forEach(function(doc) {
+      patients.push(Object.assign({_id: doc.id}, doc.data()));
+    });
+    buildPatientSelect();
+  }).catch(function(e){ console.error('patients取得失敗', e); });
+
+  // スケジュールを取得（リアルタイム）
+  _db.collection('schedules').orderBy('date').onSnapshot(function(snap) {
+    schedules = [];
+    snap.forEach(function(doc) {
+      schedules.push(Object.assign({_id: doc.id}, doc.data()));
+    });
+    render();
+    hideLoading();
+  }, function(e){
+    console.error('schedules取得失敗', e);
+    hideLoading();
+  });
+}
+
+function saveScheduleToDb(data, id) {
+  if (!_db) { showToast('DB未接続'); return; }
+  var ref = id ? _db.collection('schedules').doc(id) : _db.collection('schedules').doc();
+  ref.set(data).then(function() {
+    showToast(id ? '予定を更新しました' : '予定を追加しました');
+    closeAddModal();
+  }).catch(function(e){ showToast('保存に失敗しました'); console.error(e); });
+}
+
+function deleteScheduleFromDb(id) {
+  if (!_db) return;
+  _db.collection('schedules').doc(id).delete().then(function() {
+    showToast('予定を削除しました');
+  }).catch(function(e){ showToast('削除に失敗しました'); console.error(e); });
+}
+
+/* ══════════════════════════════════════════
+   患者セレクト生成
+══════════════════════════════════════════ */
+function buildPatientSelect() {
+  var sel = document.getElementById('sel-patient');
+  while (sel.options.length > 1) sel.remove(1);
+  patients.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p._id;
+    var label = (p.area||'') + ' / ' + (p.name||'') + '（' + (p.id||'') + '）';
+    opt.textContent = label;
+    opt.dataset.area = p.area || '';
+    opt.dataset.display = label;
+    sel.appendChild(opt);
+  });
+}
+
+/* ══════════════════════════════════════════
+   ビュー切替
+══════════════════════════════════════════ */
+function switchView(v) {
+  currentView = v;
+  document.getElementById('month-view').style.display = v === 'month' ? '' : 'none';
+  document.getElementById('week-view').style.display  = v === 'week'  ? '' : 'none';
+  document.getElementById('btn-month').classList.toggle('active', v === 'month');
+  document.getElementById('btn-week').classList.toggle('active', v === 'week');
+  render();
+}
+
+function navigate(dir) {
+  if (currentView === 'month') {
+    currentMonth += dir;
+    if (currentMonth > 11) { currentMonth = 0;  currentYear++;  }
+    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  } else {
+    currentWeekStart = addDays(currentWeekStart, dir * 7);
+  }
+  render();
+}
+
+function goToday() {
+  today = new Date();
+  currentYear  = today.getFullYear();
+  currentMonth = today.getMonth();
+  currentWeekStart = getWeekStart(today);
+  render();
+  showToast('今日（' + (currentMonth+1) + '月' + today.getDate() + '日）に移動しました');
+}
+
+/* ══════════════════════════════════════════
+   モーダル：日別予定一覧
+══════════════════════════════════════════ */
+var dayListDate = null;
+
+function openDayList(dateStr) {
+  dayListDate = dateStr;
+  var d = fromYMD(dateStr);
+  var DOW = ['日','月','火','水','木','金','土'];
+  var title = (d.getMonth()+1) + '月' + d.getDate() + '日（' + DOW[d.getDay()] + '）の予定';
+  document.getElementById('daylist-title').textContent = title;
+
+  var evs = schedules.filter(function(s){ return s.date === dateStr; });
+  evs.sort(function(a,b){ return (a.time||'').localeCompare(b.time||''); });
+
+  var content = document.getElementById('daylist-content');
+  content.innerHTML = '';
+
+  if (evs.length === 0) {
+    content.innerHTML = '<p style="color:var(--ink3);font-size:14px;text-align:center;padding:16px 0">予定はありません</p>';
+  } else {
+    evs.forEach(function(ev) {
+      (function(evId, evArea, evTime, evName) {
+        var row = document.createElement('div');
+        row.className = 'daylist-event ' + areaClass(evArea);
+        row.innerHTML = '<span class="daylist-event-time">' + (evTime ? evTime.slice(0,5) : '--:--') + '</span>'
+          + '<span class="daylist-event-name">' + evName + '</span>'
+          + '<span style="font-size:11px;opacity:.7">›</span>';
+        row.onclick = function() {
+          closeDayList();
+          openDetailModal(evId);
+        };
+        content.appendChild(row);
+      })(ev._id, ev.area, ev.time, ev.displayName || ev.patientId || '');
+    });
+  }
+
+  document.getElementById('daylist-modal-overlay').classList.add('open');
+}
+
+function closeDayList() {
+  document.getElementById('daylist-modal-overlay').classList.remove('open');
+}
+
+function addFromDayList() {
+  var d = dayListDate;
+  closeDayList();
+  openAddModal(d);
+}
+
+/* ══════════════════════════════════════════
+   レンダリング
+══════════════════════════════════════════ */
+function render() {
+  if (currentView === 'month') renderMonth();
+  else renderWeek();
+  updateNavLabel();
+}
+
+function updateNavLabel() {
+  var lbl = document.getElementById('cal-label');
+  if (currentView === 'month') {
+    lbl.textContent = currentYear + '年 ' + (currentMonth+1) + '月';
+  } else {
+    var end = addDays(currentWeekStart, 6);
+    var sy = currentWeekStart.getFullYear(), sm = currentWeekStart.getMonth()+1;
+    var ey = end.getFullYear(), em = end.getMonth()+1;
+    if (sy === ey && sm === em) {
+      lbl.textContent = sy+'年'+sm+'月';
+    } else {
+      lbl.textContent = sy+'年'+sm+'月 〜 '+ey+'年'+em+'月';
+    }
+  }
+}
+
+/* ─── 月ビュー ─── */
+function renderMonth() {
+  var grid = document.getElementById('month-grid');
+  grid.innerHTML = '';
+  var todayStr = toYMD(today);
+
+  var firstDay  = new Date(currentYear, currentMonth, 1);
+  var startDate = addDays(firstDay, -firstDay.getDay());
+
+  // 6週分 = 42セル
+  for (var i = 0; i < 42; i++) {
+    (function(idx) {
+      var d = addDays(startDate, idx);
+      var dStr = toYMD(d);
+      var isThisMonth = d.getMonth() === currentMonth;
+      var isToday = dStr === todayStr;
+      var dow = d.getDay();
+
+      var cell = document.createElement('div');
+      cell.className = 'day-cell'
+        + (isThisMonth ? '' : ' other-month')
+        + (isToday ? ' is-today' : '')
+        + (dow === 0 ? ' is-sun' : '')
+        + (dow === 6 ? ' is-sat' : '');
+
+      var numEl = document.createElement('span');
+      numEl.className = 'day-num';
+      numEl.textContent = d.getDate();
+      cell.appendChild(numEl);
+
+      // 当日の予定を取得・表示
+      var dayEvents = schedules.filter(function(s) { return s.date === dStr; });
+      dayEvents.sort(function(a,b) { return (a.time||'').localeCompare(b.time||''); });
+
+      var maxShow = 2;
+      dayEvents.slice(0, maxShow).forEach(function(ev) {
+        (function(evId, evArea, evTime, evName) {
+          var chip = document.createElement('span');
+          chip.className = 'event-chip ' + areaClass(evArea);
+          chip.textContent = (evTime ? evTime.slice(0,5) + ' ' : '') + evName;
+          chip.onclick = function(e) { e.stopPropagation(); openDetailModal(evId); };
+          cell.appendChild(chip);
+        })(ev._id, ev.area, ev.time, ev.displayName || ev.patientId || '');
+      });
+
+      if (dayEvents.length > maxShow) {
+        var more = document.createElement('span');
+        more.className = 'more-link';
+        more.textContent = '他' + (dayEvents.length - maxShow) + '件';
+        more.onclick = function(e) { e.stopPropagation(); openDayList(dStr); };
+        cell.appendChild(more);
+      }
+
+      // 日付数字・空白クリック → 予定一覧 or 追加
+      cell.onclick = function(ev) {
+        var tgt = ev.target;
+        if (tgt === cell || tgt === numEl) {
+          if (dayEvents.length > 0) openDayList(dStr);
+          else openAddModal(dStr);
+        }
+      };
+
+      grid.appendChild(cell);
+    })(i);
+  }
+}
+
+/* ─── 週ビュー（table版） ─── */
+var HOURS = [];
+for (var h = 7; h <= 20; h++) HOURS.push(h);
+
+function renderWeek() {
+  var todayStr = toYMD(today);
+  var DOW = ['日','月','火','水','木','金','土'];
+
+  /* ─ ヘッダー行を作る ─ */
+  var thead = document.getElementById('week-thead');
+  thead.innerHTML = '';
+  var headerRow = document.createElement('tr');
+
+  // 左上コーナー
+  var corner = document.createElement('th');
+  corner.className = 'wt-corner';
+  headerRow.appendChild(corner);
+
+  for (var di = 0; di < 7; di++) {
+    var dh   = addDays(currentWeekStart, di);
+    var dhStr = toYMD(dh);
+    var dow   = dh.getDay();
+    var isT   = dhStr === todayStr;
+    var th = document.createElement('th');
+    var cls = isT ? 'wt-head-today' : (dow===0 ? 'wt-head-sun' : (dow===6 ? 'wt-head-sat' : ''));
+    if (cls) th.className = cls;
+    th.innerHTML = '<span class="wt-day-name">' + DOW[dow] + '</span>'
+      + '<div class="wt-day-num">' + dh.getDate() + '</div>';
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+
+  /* ─ ボディ（時間行 × 7列） ─ */
+  var tbody = document.getElementById('week-tbody');
+  tbody.innerHTML = '';
+
+  for (var hi = 0; hi < HOURS.length; hi++) {
+    var hour = HOURS[hi];
+    var tr = document.createElement('tr');
+
+    // 時間ラベルセル
+    var timeTd = document.createElement('td');
+    timeTd.className = 'wt-time';
+    timeTd.textContent = hour + ':00';
+    tr.appendChild(timeTd);
+
+    // 各日のスロット
+    for (var di = 0; di < 7; di++) {
+      (function(dayIdx, hr) {
+        var d    = addDays(currentWeekStart, dayIdx);
+        var dStr = toYMD(d);
+
+        var td = document.createElement('td');
+        td.className = 'wt-slot';
+        td.onclick = function(ev) {
+          if (ev.target === td) {
+            openAddModal(dStr, String(hr).padStart(2,'0') + ':00');
+          }
+        };
+
+        // この時間帯の予定を埋め込む
+        var evs = schedules.filter(function(s) {
+          if (s.date !== dStr || !s.time) return false;
+          return parseInt(s.time.split(':')[0]) === hr;
+        });
+        evs.forEach(function(ev) {
+          (function(evId, evArea, evTime, evName) {
+            var span = document.createElement('span');
+            span.className = 'wt-event ' + areaClass(evArea);
+            span.textContent = (evTime ? evTime.slice(0,5) + ' ' : '') + evName;
+            span.onclick = function(e) { e.stopPropagation(); openDetailModal(evId); };
+            td.appendChild(span);
+          })(ev._id, ev.area, ev.time, ev.displayName || ev.patientId || '');
+        });
+
+        tr.appendChild(td);
+      })(di, hour);
+    }
+
+    tbody.appendChild(tr);
+  }
+}
+
+/* ══════════════════════════════════════════
+   モーダル：追加/編集
+══════════════════════════════════════════ */
+function openAddModal(dateStr, timeStr) {
+  editingId = null;
+  document.getElementById('modal-title-text').textContent = '予定を追加';
+  document.getElementById('sel-patient').value = '';
+  document.getElementById('inp-date').value = dateStr || toYMD(today);
+  document.getElementById('inp-time').value = timeStr || '10:00';
+  document.getElementById('inp-memo').value = '';
+  document.getElementById('edit-actions').style.display = 'none';
+  document.getElementById('add-modal-overlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  var ev = schedules.find(function(s){ return s._id === id; });
+  if (!ev) return;
+  editingId = id;
+  document.getElementById('modal-title-text').textContent = '予定を編集';
+  // 患者セレクト：patientIdで選択
+  var sel = document.getElementById('sel-patient');
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === ev.patientId) { sel.selectedIndex = i; break; }
+  }
+  document.getElementById('inp-date').value = ev.date || '';
+  document.getElementById('inp-time').value = ev.time || '';
+  document.getElementById('inp-memo').value = ev.memo || '';
+  document.getElementById('edit-actions').style.display = 'block';
+  document.getElementById('add-modal-overlay').classList.add('open');
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal-overlay').classList.remove('open');
+}
+
+function saveSchedule() {
+  var selPat = document.getElementById('sel-patient');
+  var patId  = selPat.value;
+  var date   = document.getElementById('inp-date').value;
+  var time   = document.getElementById('inp-time').value;
+  var memo   = document.getElementById('inp-memo').value.trim();
+
+  if (!patId) { showToast('患者を選択してください'); return; }
+  if (!date)  { showToast('日付を入力してください');   return; }
+
+  var selOpt = selPat.options[selPat.selectedIndex];
+  var area   = selOpt ? (selOpt.dataset.area || '') : '';
+  var displayName = selOpt ? selOpt.textContent : '';
+
+  var data = {
+    patientId:   patId,
+    displayName: displayName,
+    area:        area,
+    date:        date,
+    time:        time,
+    memo:        memo,
+    repeat:      'none',
+    updatedAt:   new Date().toISOString()
+  };
+
+  saveScheduleToDb(data, editingId);
+}
+
+function deleteSchedule() {
+  if (!editingId) return;
+  if (!confirm('この予定を削除しますか？')) return;
+  deleteScheduleFromDb(editingId);
+  closeAddModal();
+}
+
+/* ══════════════════════════════════════════
+   モーダル：詳細
+══════════════════════════════════════════ */
+function openDetailModal(id) {
+  var ev = schedules.find(function(s){ return s._id === id; });
+  if (!ev) return;
+  detailId = id;
+  var content = document.getElementById('detail-content');
+  var cls = areaClass(ev.area);
+  content.innerHTML =
+    '<span class="event-detail-chip '+cls+'">' + (ev.area||'?') + ' エリア</span>' +
+    '<div class="detail-row"><strong>患者</strong>' + (ev.displayName || ev.patientId || '') + '</div>' +
+    '<div class="detail-row"><strong>日時</strong>' + (ev.date||'') + '　' + (ev.time||'') + '</div>' +
+    (ev.memo ? '<div class="detail-row"><strong>メモ</strong>' + ev.memo + '</div>' : '');
+  document.getElementById('detail-modal-overlay').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal-overlay').classList.remove('open');
+  detailId = null;
+}
+
+function editFromDetail() {
+  closeDetailModal();
+  openEditModal(detailId);
+}
+
+function deleteFromDetail() {
+  if (!detailId) return;
+  if (!confirm('この予定を削除しますか？')) return;
+  deleteScheduleFromDb(detailId);
+  closeDetailModal();
+}
+
+/* ══════════════════════════════════════════
+   月ピッカー
+══════════════════════════════════════════ */
+function openMonthPicker() {
+  mpPickYear = currentYear;
+  renderMonthPicker();
+  document.getElementById('month-picker-overlay').classList.add('open');
+}
+function closeMonthPicker() {
+  document.getElementById('month-picker-overlay').classList.remove('open');
+}
+function mpYear(dir) {
+  mpPickYear += dir;
+  renderMonthPicker();
+}
+function renderMonthPicker() {
+  document.getElementById('mp-year-label').textContent = mpPickYear + '年';
+  var grid = document.getElementById('mp-months');
+  grid.innerHTML = '';
+  for (var m = 0; m < 12; m++) {
+    (function(mm){
+      var btn = document.createElement('button');
+      btn.className = 'mp-month-btn' + (mpPickYear === currentYear && mm === currentMonth ? ' selected' : '');
+      btn.textContent = (mm+1) + '月';
+      btn.onclick = function() {
+        currentYear  = mpPickYear;
+        currentMonth = mm;
+        currentView  = 'month';
+        switchView('month');
+        closeMonthPicker();
+      };
+      grid.appendChild(btn);
+    })(m);
+  }
+}
+
+/* ══════════════════════════════════════════
+   ユーティリティ
+══════════════════════════════════════════ */
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 2200);
+}
+function hideLoading() {
+  document.getElementById('loading').classList.add('hide');
+}
+
+// オーバーレイ外クリックで閉じる
+document.getElementById('add-modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeAddModal();
+});
+document.getElementById('detail-modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailModal();
+});
+document.getElementById('daylist-modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeDayList();
+});
+document.getElementById('month-picker-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeMonthPicker();
+});
+
+/* ══════════════════════════════════════════
+   初期化
+══════════════════════════════════════════ */
+switchView('month');
+loadAll();
+</script>
+</body>
+</html>
