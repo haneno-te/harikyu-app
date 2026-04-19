@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>訪問鍼灸 記録アプリ</title>
+<!-- Firebase SDK を head で先読み（promptより前に確実に読み込む） -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+/* ══ Firebase 初期化（head内・即時実行） ══ */
+var _db = null;
+try {
+  if (!firebase.apps.length) {
+    firebase.initializeApp({
+      apiKey:            'AIzaSyC4CbzYPHUj3BQ_X2cS2dVg9UixGiCpO6A',
+      authDomain:        'ho-mon.firebaseapp.com',
+      projectId:         'ho-mon',
+      storageBucket:     'ho-mon.firebasestorage.app',
+      messagingSenderId: '856550721728',
+      appId:             '1:856550721728:web:75de566fb602691b6fc525'
+    });
+  }
+  _db = firebase.firestore();
+  console.log('[Firebase] 初期化完了');
+} catch(e) {
+  console.error('[Firebase] 初期化失敗', e);
+}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;background:#f0ede8;color:#1c1a18;min-height:100vh;padding-bottom:80px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px}
+:root{--ink:#1c1a18;--ink2:#5c5a56;--ink3:#9c9a96;--paper:#ffffff;--paper2:#f7f5f1;--paper3:#f0ede8;--border:#dedad4;--border2:#c8c4bc;--pine:#1a5c3e;--pine-mid:#247a52;--pine-pale:#e6f2ec;--pine-pale2:#d0e9da;--amber:#b86820;--amber-pale:#fdf0e4;--red:#9c2c1a;--red-pale:#fdecea;--r:10px;--r-sm:7px;--shadow:0 2px 8px rgba(0,0,0,.09);--shadow-sm:0 1px 4px rgba(0,0,0,.07);--hh:57px}
+#app-header{background:var(--pine);padding:14px 16px 0;position:sticky;top:0;z-index:200}
+.header-title{color:#fff;font-size:15px;font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.header-title-icon{width:22px;height:22px;background:rgba(255,255,255,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.main-tabs{display:flex;gap:2px}
+.main-tab{flex:1;padding:10px 4px 9px;border:none;background:rgba(255,255,255,.15);color:rgba(255,255,255,.7);font-size:12px;font-weight:600;border-radius:8px 8px 0 0;transition:background .15s,color .15s;letter-spacing:.02em}
+.main-tab.active{background:var(--paper3);color:var(--pine)}
+.main-tab:not(.active):hover{background:rgba(255,255,255,.25);color:#fff}
+.content{max-width:680px;margin:0 auto;padding:16px 12px}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:18px 16px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.card-title{font-size:11px;font-weight:700;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.fld{margin-bottom:14px}.fld:last-child{margin-bottom:0}
+.fld-label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px;letter-spacing:.03em}
+.fld-label .req{color:var(--red);margin-left:2px}
+select,input[type="text"],input[type="date"],input[type="number"],input[type="password"],textarea{display:block;width:100%;padding:11px 12px;border:1.5px solid var(--border2);border-radius:var(--r-sm);font-size:16px;color:var(--ink);background:var(--paper);outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+select:focus,input:focus,textarea:focus{border-color:var(--pine-mid);box-shadow:0 0 0 3px var(--pine-pale)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%239c9a96' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:38px;cursor:pointer}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:400px){.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}}
+.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
+.chk-group{display:flex;flex-wrap:wrap;gap:8px}
+.chk-item{display:flex;align-items:center;gap:7px;font-size:14px;padding:7px 12px;background:var(--paper2);border:1.5px solid var(--border);border-radius:20px;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
+.chk-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--pine);cursor:pointer}
+.chk-item:has(input:checked){background:var(--pine-pale);border-color:var(--pine-mid);color:var(--pine);font-weight:600}
+#bad-extra{display:none}
+/* アコーディオン */
+.accordion{border:1.5px solid var(--border2);border-radius:var(--r-sm);overflow:hidden;margin-bottom:14px}
+.accordion-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--paper2);cursor:pointer;font-size:14px;font-weight:700;color:var(--ink2);user-select:none;-webkit-tap-highlight-color:transparent}
+.accordion-head:hover{background:var(--pine-pale)}
+.accordion-arrow{font-size:12px;transition:transform .2s;color:var(--ink3)}
+.accordion-head.open .accordion-arrow{transform:rotate(180deg)}
+.accordion-body{overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease;padding:0 14px}
+.accordion-body.open{max-height:1200px;opacity:1;padding:12px 14px}
+.acc-badge{font-size:11px;font-weight:700;background:var(--pine-pale);color:var(--pine);border-radius:10px;padding:2px 8px;margin-left:8px}
+/* バイタル */
+.vitals-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vitals-auto{background:var(--pine-pale);border:1px solid var(--pine-pale2);border-radius:var(--r-sm);padding:9px 12px;font-size:13px;color:var(--pine);font-weight:700;display:flex;align-items:center;gap:6px}
+/* 設定アコーディオン */
+.setting-accordion{border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;box-shadow:var(--shadow-sm);background:var(--paper)}
+.setting-accordion-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--ink);user-select:none;-webkit-tap-highlight-color:transparent}
+.setting-accordion-head:hover{background:var(--paper2)}
+.setting-accordion-head .sa-arrow{font-size:12px;color:var(--ink3);transition:transform .2s}
+.setting-accordion-head.open .sa-arrow{transform:rotate(180deg)}
+.setting-accordion-body{overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease}
+.setting-accordion-body.open{max-height:1200px;opacity:1}
+.setting-accordion-inner{padding:0 16px 16px}
+#tools-area{overflow:hidden;max-height:0;opacity:0;transition:max-height .5s ease,opacity .3s ease}
+#tools-area.open{max-height:3000px;opacity:1}
+.tools-row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
+.tools-row select{flex:1;padding:9px 10px;font-size:15px}
+.tools-row select.qty-sel{flex:none;width:88px}
+.tools-row button{flex:none}
+.tool-added-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--pine-pale);border:1px solid var(--pine-pale2);border-radius:var(--r-sm);margin-bottom:6px;font-size:14px;color:var(--pine);font-weight:600}
+.tool-added-del{padding:4px 10px;font-size:12px;font-weight:700;border:1.5px solid var(--pine-mid);border-radius:20px;background:transparent;color:var(--pine);cursor:pointer}
+.tool-added-del:hover{background:var(--red-pale);border-color:var(--red);color:var(--red)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border:1.5px solid var(--border2);border-radius:var(--r-sm);font-size:15px;font-weight:700;background:var(--paper);color:var(--ink);transition:background .13s,transform .1s,border-color .13s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn:hover{background:var(--paper2);border-color:var(--ink3)}
+.btn-full{width:100%;padding:14px}
+.btn-pine{background:var(--pine);color:#fff;border-color:var(--pine)}
+.btn-pine:hover{background:var(--pine-mid)}
+.btn-sm{padding:8px 14px;font-size:13px}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-info{background:#1a487a;color:#fff;border-color:#1a487a}
+.btn-amber{background:var(--amber);color:#fff;border-color:var(--amber)}
+.rec-card{background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px;margin-bottom:10px;box-shadow:var(--shadow-sm);border-left:4px solid var(--border2)}
+.rec-card.cond-good{border-left-color:#2d7a3a}
+.rec-card.cond-normal{border-left-color:#888}
+.rec-card.cond-bad{border-left-color:var(--red)}
+.rec-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.rec-name{font-size:16px;font-weight:700}
+.rec-date{font-size:12px;color:var(--ink2);text-align:right;line-height:1.4}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700;margin-top:4px}
+.badge-good{background:#eaf6ed;color:#2d7a3a}
+.badge-normal{background:var(--paper2);color:var(--ink2)}
+.badge-bad{background:var(--red-pale);color:var(--red)}
+.rec-row{font-size:13px;color:var(--ink2);margin-top:5px;line-height:1.6}
+.rec-row strong{color:var(--ink);margin-right:4px}
+.rec-treatment{font-size:13px;color:var(--ink2);margin-top:7px;white-space:pre-wrap;word-break:break-all;line-height:1.6;border-top:1px solid var(--border);padding-top:7px}
+.rec-actions{display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.list-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--paper);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);flex-wrap:wrap;gap:8px;position:sticky;top:var(--hh);z-index:100;margin-bottom:0}
+.list-bar-count{font-size:13px;color:var(--ink2)}
+.list-bar-count strong{color:var(--ink);font-size:15px}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;position:sticky;top:calc(var(--hh) + 53px);z-index:99;background:var(--paper3);padding:8px 0 4px;margin-bottom:8px}
+.filter-bar select{width:auto;flex:1;min-width:120px;padding:8px 36px 8px 10px;font-size:14px}
+.sub-tabs{display:flex;gap:6px;position:sticky;top:var(--hh);z-index:100;background:var(--paper3);padding:10px 0 8px;margin-bottom:0}
+.sub-tab{padding:8px 18px;border:1.5px solid var(--border2);border-radius:20px;background:var(--paper);font-size:13px;font-weight:600;color:var(--ink2);transition:all .15s}
+.sub-tab.active{background:var(--pine);color:#fff;border-color:var(--pine)}
+.sub-tab:hover:not(.active){background:var(--paper2)}
+select option{white-space:normal}
+.sub-panel{display:none}.sub-panel.active{display:block}
+.file-drop{border:2px dashed var(--border2);border-radius:var(--r);padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;background:var(--paper2)}
+.file-drop:hover,.file-drop.drag{border-color:var(--pine-mid);background:var(--pine-pale)}
+.file-drop input[type=file]{display:none}
+.file-drop-label{font-size:14px;color:var(--ink2)}
+.file-drop-label strong{color:var(--pine)}
+.file-drop-hint{font-size:12px;color:var(--ink3);margin-top:4px;display:block}
+#visit-ptinfo{background:var(--pine-pale);border:1px solid var(--pine-pale2);border-radius:var(--r-sm);padding:10px 13px;margin:8px 0 4px;font-size:13px;display:none}
+#visit-ptinfo .pt-name-tag{font-weight:700;font-size:14px;color:var(--pine);margin-bottom:2px}
+.empty{text-align:center;padding:40px 20px;color:var(--ink3);font-size:14px}
+.empty-icon{font-size:36px;margin-bottom:10px;opacity:.4}
+.msg{border-radius:var(--r-sm);padding:10px 14px;font-size:13px;margin-top:10px}
+.msg-ok{background:var(--pine-pale);color:var(--pine);font-weight:600}
+.msg-err{background:var(--red-pale);color:var(--red);font-weight:600}
+.pt-list-card{background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:10px}
+.pt-list-info{flex:1;min-width:0}
+.pt-list-name{font-size:15px;font-weight:700;color:var(--ink)}
+.pt-list-sub{font-size:12px;color:var(--ink3);margin-top:4px;line-height:1.6}
+.pt-list-sub-line{display:block}
+.pt-list-actions{display:flex;gap:6px;flex-shrink:0;align-self:flex-start}
+.btn-edit{padding:7px 13px;font-size:12px;font-weight:700;border:1.5px solid var(--border2);border-radius:var(--r-sm);background:var(--paper);color:var(--ink2);transition:background .12s,border-color .12s}
+.btn-edit:hover{background:var(--pine-pale);border-color:var(--pine-mid);color:var(--pine)}
+.btn-del{padding:7px 13px;font-size:12px;font-weight:700;border:1.5px solid var(--border2);border-radius:var(--r-sm);background:var(--paper);color:var(--ink3);transition:background .12s,border-color .12s}
+.btn-del:hover{background:var(--red-pale);border-color:var(--red);color:var(--red)}
+.edit-banner{display:none;border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:600;align-items:center;gap:8px}
+.edit-banner.show{display:flex}
+.edit-banner.amber{background:var(--amber-pale);border:1.5px solid #e8b070;color:var(--amber)}
+.banner-cancel{margin-left:auto;padding:4px 12px;border-radius:20px;background:transparent;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid currentColor;color:inherit}
+.setting-list-item{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.setting-list-item:last-child{border-bottom:none}
+.setting-list-item span{flex:1}
+.setting-add-row{display:flex;gap:8px;margin-top:10px}
+.setting-add-row input{flex:1}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:11px 24px;border-radius:24px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.22)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.t-ok{background:var(--pine)}
+#toast.t-ng{background:var(--red)}
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <div class="header-title"><span class="header-title-icon">🌿</span>訪問鍼灸 記録アプリ</div>
+  <div class="main-tabs">
+    <button class="main-tab active" onclick="gotoTab('visit')">訪問記録</button>
+    <button class="main-tab"       onclick="gotoTab('list')">記録一覧</button>
+    <button class="main-tab"       onclick="gotoTab('roster')">名簿</button>
+    <button class="main-tab"       onclick="gotoTab('settings')">設定</button>
+  </div>
+</div>
+
+<div class="content">
+<div id="panel-visit" class="panel active">
+  <div class="card">
+    <div class="card-title">訪問記録の入力</div>
+    <div id="rec-edit-banner" class="edit-banner amber">
+      ✏️ <span id="rec-edit-banner-text">記録を編集中</span>
+      <button class="banner-cancel" onclick="cancelRecordEdit()">キャンセル</button>
+    </div>
+    <div class="fld">
+      <label class="fld-label" for="v-patient">患者<span class="req">*</span></label>
+      <select id="v-patient" onchange="onVisitPatientChange()" style="padding-right:38px;text-overflow:ellipsis"><option value="">患者を選択してください</option></select>
+      <div id="visit-ptinfo"><div class="pt-name-tag" id="vpt-name"></div><div style="color:var(--ink3);font-size:12px" id="vpt-id"></div></div>
+    </div>
+    <div class="fld">
+      <label class="fld-label" for="v-date">日付<span class="req">*</span></label>
+      <input type="date" id="v-date">
+    </div>
+    <div class="grid2">
+      <div class="fld">
+        <label class="fld-label" for="v-cond">体調</label>
+        <select id="v-cond">
+          <option value="">選択してください</option>
+          <option value="良好">良好</option><option value="普通">普通</option><option value="不調">不調</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label class="fld-label" for="v-progress">経過</label>
+        <select id="v-progress">
+          <option value="">選択してください</option>
+          <option value="改善">改善</option><option value="軽快・軽減">軽快・軽減</option>
+          <option value="維持">維持</option><option value="良好">良好</option>
+          <option value="増悪">増悪</option><option value="不良">不良</option>
+        </select>
+      </div>
+    </div>
+    <div id="bad-extra"></div>
+    <!-- 随伴症状アコーディオン -->
+    <div class="accordion">
+      <div class="accordion-head" id="acc-symptoms-head" onclick="toggleAccordion('symptoms')">
+        <span>随伴症状<span class="acc-badge" id="acc-symptoms-badge" style="display:none"></span></span>
+        <span class="accordion-arrow">▼</span>
+      </div>
+      <div class="accordion-body" id="acc-symptoms-body">
+        <div class="chk-group" id="v-symptoms-checks"></div>
+        <input type="text" id="v-symptom-other" placeholder="その他（自由入力）" style="margin-top:10px">
+      </div>
+    </div>
+    <!-- バイタル -->
+    <div class="accordion">
+      <div class="accordion-head" id="acc-vitals-head" onclick="toggleAccordion('vitals')">
+        <span>バイタル</span>
+        <span class="accordion-arrow">▼</span>
+      </div>
+      <div class="accordion-body" id="acc-vitals-body">
+        <div class="vitals-grid">
+          <div class="fld"><label class="fld-label">血圧 最高（mmHg）</label><input type="number" id="v-bp-sys" placeholder="例：120" min="0" max="300" oninput="calcPulsePressure()"></div>
+          <div class="fld"><label class="fld-label">血圧 最低（mmHg）</label><input type="number" id="v-bp-dia" placeholder="例：80" min="0" max="200" oninput="calcPulsePressure()"></div>
+        </div>
+        <div class="fld"><div class="vitals-auto" id="v-pulse-pressure">脈圧：入力待ち</div></div>
+        <div class="vitals-grid">
+          <div class="fld"><label class="fld-label">脈拍（回/分）</label><input type="number" id="v-pulse" placeholder="例：72" min="0" max="250"></div>
+          <div class="fld"><label class="fld-label">体温（℃）</label><input type="number" id="v-temp" placeholder="例：36.5" min="30" max="45" step="0.1"></div>
+        </div>
+      </div>
+    </div>
+    <div class="fld">
+      <label class="fld-label">施術テンプレート</label>
+      <select id="v-template" onchange="applyTemplate()"><option value="">テンプレートを選択</option></select>
+    </div>
+    <div class="fld">
+      <label class="fld-label" for="v-treatment">施術内容</label>
+      <textarea id="v-treatment" placeholder="施術内容を入力（音声入力も使えます）"></textarea>
+    </div>
+    <div class="fld">
+      <label class="fld-label" for="v-memo">所見・メモ</label>
+      <textarea id="v-memo" placeholder="気になること、変化など" style="min-height:64px"></textarea>
+    </div>
+    <div class="fld">
+      <label class="fld-label">使用道具</label>
+      <div class="tools-row">
+        <select id="tool-sel-name" onchange="syncToolQty()"><option value="">道具を選択</option></select>
+        <select id="tool-sel-qty" class="qty-sel"></select>
+        <button type="button" class="btn btn-sm btn-pine" onclick="addToolEntry()">＋ 追加</button>
+      </div>
+      <div id="tools-added-list"></div>
+    </div>
+    <button class="btn btn-pine btn-full" id="save-btn" onclick="saveRecord()" style="margin-top:4px">✓ 保存する</button>
+  </div>
+</div>
+
+<div id="panel-list" class="panel">
+  <div class="list-bar">
+    <span class="list-bar-count">記録 <strong id="rec-count">0</strong> 件</span>
+    <button class="btn btn-info btn-sm" onclick="exportCSV()">⬇ CSV出力</button>
+  </div>
+  <div class="filter-bar">
+    <select id="filter-patient" onchange="renderList()"><option value="">全患者</option></select>
+  </div>
+  <div id="rec-list"></div>
+</div>
+
+<div id="panel-roster" class="panel">
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="gotoSub('csv')">CSV取込</button>
+    <button class="sub-tab"       onclick="gotoSub('manual')">手動入力</button>
+    <button class="sub-tab"       onclick="gotoSub('view')">名簿表示</button>
+  </div>
+  <div id="sub-csv" class="sub-panel active">
+    <div class="card">
+      <div class="card-title">CSVファイル取込</div>
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:12px;line-height:1.7">列順：<code style="font-size:12px;background:var(--paper2);padding:3px 8px;border-radius:5px">id, area, name</code></p>
+      <div class="file-drop" id="file-drop" onclick="document.getElementById('csv-input').click()" ondragover="dropOver(event)" ondragleave="dropLeave(event)" ondrop="dropFile(event)">
+        <input type="file" id="csv-input" accept=".csv,text/csv" onchange="loadCSV(event)">
+        <div class="file-drop-label"><div style="font-size:28px;margin-bottom:6px;opacity:.5">📂</div><strong>タップしてCSVを選択</strong><span class="file-drop-hint">またはファイルをここにドラッグ</span></div>
+      </div>
+      <div id="csv-msg"></div>
+    </div>
+  </div>
+  <div id="sub-manual" class="sub-panel">
+    <div class="card">
+      <div class="card-title">患者を手動登録</div>
+      <div id="edit-banner" class="edit-banner amber">✏️ <span id="edit-banner-text">編集中</span><button class="banner-cancel" onclick="cancelEdit()">キャンセル</button></div>
+      <div class="grid3">
+        <div class="fld"><label class="fld-label" for="m-id">ID<span class="req">*</span></label><input type="text" id="m-id" placeholder="例：1"></div>
+        <div class="fld"><label class="fld-label" for="m-area">エリア<span class="req">*</span></label><select id="m-area"><option value="">選択してください</option><option value="豊">豊（豊平）</option><option value="白">白（白石）</option><option value="中">中（中央）</option><option value="東">東（東）</option><option value="北">北（北）</option><option value="南">南（南）</option><option value="厚">厚（厚別）</option><option value="清">清（清田）</option><option value="西">西（西）</option><option value="手">手（手稲）</option></select></div>
+        <div class="fld"><label class="fld-label" for="m-name">ネーム<span class="req">*</span></label><input type="text" id="m-name" placeholder="例：SATA" maxlength="6"></div>
+      </div>
+      <div class="fld">
+        <label class="fld-label" for="m-complaint">主訴（同意書記載）</label>
+        <select id="m-complaint" onchange="onComplaintChange()">
+          <option value="">選択してください</option>
+          <option value="神経痛">1. 神経痛</option>
+          <option value="リウマチ">2. リウマチ</option>
+          <option value="頸腕症候群">3. 頸腕症候群</option>
+          <option value="五十肩">4. 五十肩</option>
+          <option value="腰痛症">5. 腰痛症</option>
+          <option value="頸椎捻挫後遺症">6. 頸椎捻挫後遺症</option>
+          <option value="その他">7. その他（医師指定）</option>
+        </select>
+        <input type="text" id="m-complaint-other" placeholder="医師指定の傷病名を入力" style="margin-top:8px;display:none">
+      </div>
+      <div class="grid2">
+        <div class="fld">
+          <label class="fld-label">同意区分<span class="req">*</span></label>
+          <div style="display:flex;gap:16px;margin-top:6px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer"><input type="radio" name="m-consent-type" value="initial" checked style="width:18px;height:18px;accent-color:var(--pine)">初回の同意</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer"><input type="radio" name="m-consent-type" value="re" style="width:18px;height:18px;accent-color:var(--pine)">再同意</label>
+          </div>
+        </div>
+        <div class="fld"><label class="fld-label" for="m-consent-date">同意日</label><input type="date" id="m-consent-date"></div>
+      </div>
+      <button class="btn btn-pine btn-full" onclick="addManual()">登録する</button>
+    </div>
+  </div>
+  <div id="sub-view" class="sub-panel">
+    <div id="roster-list"></div>
+    <p style="font-size:13px;color:var(--ink3);margin-top:8px;text-align:right">登録患者数：<strong id="pt-total">0</strong> 名</p>
+  </div>
+</div>
+
+<div id="panel-settings" class="panel">
+  <!-- パスワード変更 -->
+  <div class="setting-accordion">
+    <div class="setting-accordion-head" onclick="toggleSettingAcc(this)">
+      🔑 パスワード変更<span class="sa-arrow">▼</span>
+    </div>
+    <div class="setting-accordion-body">
+      <div class="setting-accordion-inner">
+        <div class="fld"><label class="fld-label">現在のパスワード</label><input type="password" id="s-pass-cur" placeholder="現在のパスワード"></div>
+        <div class="fld"><label class="fld-label">新しいパスワード</label><input type="password" id="s-pass-new" placeholder="新しいパスワード"></div>
+        <div class="fld"><label class="fld-label">新しいパスワード（確認）</label><input type="password" id="s-pass-new2" placeholder="もう一度入力"></div>
+        <button class="btn btn-pine btn-full" onclick="changePassword()">パスワードを変更する</button>
+      </div>
+    </div>
+  </div>
+  <!-- 施術テンプレート -->
+  <div class="setting-accordion">
+    <div class="setting-accordion-head" onclick="toggleSettingAcc(this)">
+      📝 施術テンプレート管理<span class="sa-arrow">▼</span>
+    </div>
+    <div class="setting-accordion-body">
+      <div class="setting-accordion-inner">
+        <div id="template-list"></div>
+        <div class="setting-add-row"><input type="text" id="new-template-input" placeholder="新しいテンプレートを入力"><button class="btn btn-pine btn-sm" onclick="addTemplate()">追加</button></div>
+      </div>
+    </div>
+  </div>
+  <!-- 随伴症状管理 -->
+  <div class="setting-accordion">
+    <div class="setting-accordion-head" onclick="toggleSettingAcc(this)">
+      🩺 随伴症状メニュー管理<span class="sa-arrow">▼</span>
+    </div>
+    <div class="setting-accordion-body">
+      <div class="setting-accordion-inner">
+        <p style="font-size:12px;color:var(--ink3);margin-bottom:12px">訪問記録の「随伴症状」欄に表示されるチェック項目です</p>
+        <div id="other-menu-list"></div>
+        <div class="setting-add-row"><input type="text" id="new-other-menu-input" placeholder="新しい症状項目を入力"><button class="btn btn-pine btn-sm" onclick="addOtherMenu()">追加</button></div>
+      </div>
+    </div>
+  </div>
+  <!-- 使用道具管理 -->
+  <div class="setting-accordion">
+    <div class="setting-accordion-head" onclick="toggleSettingAcc(this)">
+      🧰 使用道具管理<span class="sa-arrow">▼</span>
+    </div>
+    <div class="setting-accordion-body">
+      <div class="setting-accordion-inner">
+        <p style="font-size:12px;color:var(--ink3);margin-bottom:12px">削除しても過去の記録には影響しません</p>
+        <div id="tools-setting-list"></div>
+        <div class="setting-add-row">
+          <input type="text" id="new-tool-name" placeholder="道具名（例：台座灸・強）">
+          <input type="text" id="new-tool-unit" placeholder="単位" style="width:70px;flex:none">
+          <button class="btn btn-pine btn-sm" onclick="addTool()">追加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ══ パスワード認証 ══ */
+var APP_PASS_KEY = 'harikyu_pass';
+var _authOk = false;
+
+async function initAuth(){
+  /* Firebaseからパスワードを取得（接続できればFirebase優先） */
+  var savedPass = '1234';
+  if(_db){
+    try{
+      var doc=await _db.collection('app_settings').doc('auth').get();
+      if(doc.exists && doc.data().password){ savedPass=doc.data().password; }
+      else{ savedPass=localStorage.getItem(APP_PASS_KEY)||'1234'; }
+    }catch(e){ savedPass=localStorage.getItem(APP_PASS_KEY)||'1234'; }
+  } else {
+    savedPass=localStorage.getItem(APP_PASS_KEY)||'1234';
+  }
+  var input=prompt('パスワードを入力してください');
+  if(input!==savedPass){
+    document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-size:20px;font-weight:700;color:#9c2c1a;font-family:sans-serif;">アクセス拒否</div>';
+    throw new Error('Unauthorized');
+  }
+  _authOk=true;
+}
+initAuth();
+
+/* ══ データ ══ */
+var patients  = [];
+var records   = [];
+var templates = ['初回施術','継続','中止','変更','導入','拒否'];
+var otherMenus = ['腰痛','肩こり','頭痛','膝痛','足のむくみ','冷え','不眠','その他'];
+var tools = [
+  {name:'鍼（黄2番-寸3）',unit:'本'},{name:'鍼（赤1番-1寸）',unit:'本'},
+  {name:'台座灸',unit:'個'},{name:'電子温灸',unit:'回'},
+  {name:'パルス',unit:'回'},{name:'TENS',unit:'枚'},{name:'円皮鍼',unit:'個'}
+];
+var _editingPatientId=null, _editingRecordId=null;
+
+/* ══ 起動 ══ */
+document.getElementById('v-date').value = todayStr();
+loadLocalSettings();
+renderTemplateSelect();
+renderToolsList();
+renderTemplateSettings();
+renderToolsSettings();
+renderOtherMenuSelect();
+renderOtherMenuSettings();
+renderSymptomsChecks();
+
+/* ══ Firebase データ読み込み（loadイベントで実行） ══ */
+window.addEventListener('load', function(){ fbLoadAll(); });
+
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function loadLocalSettings(){
+  try{
+    var t=localStorage.getItem('harikyu_templates'); if(t) templates=JSON.parse(t);
+    var tl=localStorage.getItem('harikyu_tools'); if(tl) tools=JSON.parse(tl);
+    var om=localStorage.getItem('harikyu_other_menus'); if(om) otherMenus=JSON.parse(om);
+  }catch(e){}
+}
+function saveLocalSettings(){
+  localStorage.setItem('harikyu_templates',JSON.stringify(templates));
+  localStorage.setItem('harikyu_tools',JSON.stringify(tools));
+  localStorage.setItem('harikyu_other_menus',JSON.stringify(otherMenus));
+}
+
+/* ══ Firebase 操作 ══ */
+async function fbLoadAll(){
+  if(!_db){ fbBadge('err','Firebase未接続'); return; }
+  fbBadge('loading','同期中…');
+  try{
+    var ps=await _db.collection('patients').get();
+    patients=[];
+    ps.forEach(function(d){ patients.push(d.data()); });
+    console.log('[Firebase] 患者読込:',patients.length,'件');
+    var rs=await _db.collection('records').get();
+    records=[];
+    rs.forEach(function(d){ records.push(d.data()); });
+    records.sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
+    console.log('[Firebase] 記録読込:',records.length,'件');
+    /* 設定をFirebaseから読み込む */
+    var sd=await _db.collection('app_settings').doc('settings').get();
+    if(sd.exists){
+      var sdata=sd.data();
+      if(sdata.templates&&sdata.templates.length) templates=sdata.templates;
+      if(sdata.otherMenus&&sdata.otherMenus.length) otherMenus=sdata.otherMenus;
+      if(sdata.tools&&sdata.tools.length) tools=sdata.tools;
+      renderTemplateSelect(); renderTemplateSettings();
+      renderToolsList(); renderToolsSettings();
+      renderOtherMenuSettings(); renderSymptomsChecks();
+      console.log('[Firebase] 設定読込完了');
+    }
+    /* パスワードをlocalStorageに同期 */
+    var ad=await _db.collection('app_settings').doc('auth').get();
+    if(ad.exists && ad.data().password){ localStorage.setItem(APP_PASS_KEY, ad.data().password); }
+    syncPatientSelects(); renderRosterList(); renderList();
+    fbBadge('ok','クラウド同期完了');
+  }catch(e){
+    console.error('[Firebase] 読込エラー',e);
+    fbBadge('err','クラウド接続失敗');
+  }
+}
+async function fbSave(col,id,data){ if(!_db) return; try{ await _db.collection(col).doc(String(id)).set(data); }catch(e){ console.error('[Firebase] 保存エラー',e); } }
+async function fbSaveSettings(){ if(!_db) return; try{ await _db.collection('app_settings').doc('settings').set({templates:templates,otherMenus:otherMenus,tools:tools}); }catch(e){ console.error('[Firebase] 設定保存エラー',e); } }
+async function fbDelete(col,id){ if(!_db) return; try{ await _db.collection(col).doc(String(id)).delete(); }catch(e){ console.error('[Firebase] 削除エラー',e); } }
+
+function fbBadge(type,msg){
+  var el=document.getElementById('_fb_badge');
+  if(!el){ el=document.createElement('div'); el.id='_fb_badge'; Object.assign(el.style,{position:'fixed',bottom:'20px',right:'12px',fontSize:'11px',fontWeight:'700',padding:'5px 13px',borderRadius:'20px',zIndex:'9999',pointerEvents:'none',transition:'opacity .4s',boxShadow:'0 2px 8px rgba(0,0,0,.2)',fontFamily:'sans-serif'}); document.body.appendChild(el); }
+  el.style.background={loading:'#1a487a',ok:'#1a5c3e',err:'#9c2c1a'}[type]||'#333';
+  el.style.color='#fff'; el.style.opacity='1'; el.textContent='☁ '+msg;
+  if(type!=='loading') setTimeout(function(){ el.style.opacity='0'; },3000);
+}
+
+/* ══ タブ ══ */
+var TAB_NAMES=['visit','list','roster','settings'];
+function gotoTab(name){
+  document.querySelectorAll('.panel').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.main-tab').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('panel-'+name).classList.add('active');
+  document.querySelectorAll('.main-tab')[TAB_NAMES.indexOf(name)].classList.add('active');
+  if(name==='list') renderList();
+  if(name==='roster') syncRosterSel();
+  if(name==='settings'){ renderTemplateSettings(); renderToolsSettings(); renderOtherMenuSettings(); }
+}
+var SUB_NAMES=['csv','manual','view'];
+function gotoSub(name){
+  document.querySelectorAll('.sub-panel').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.sub-tab').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('sub-'+name).classList.add('active');
+  document.querySelectorAll('.sub-tab')[SUB_NAMES.indexOf(name)].classList.add('active');
+  if(name==='view'){ syncRosterSel(); renderRosterList(); }
+}
+
+/* ══ 患者 ══ */
+function syncPatientSelects(){
+  ['v-patient','filter-patient'].forEach(function(id){
+    var sel=document.getElementById(id), cur=sel.value;
+    sel.innerHTML='<option value="">'+(id==='v-patient'?'患者を選択してください':'全患者')+'</option>';
+    patients.forEach(function(p){ var o=document.createElement('option'); o.value=p.id; o.textContent=displayName(p); sel.appendChild(o); });
+    if(cur) sel.value=cur;
+  });
+  document.getElementById('pt-total').textContent=patients.length;
+}
+function syncRosterSel(){ syncPatientSelects(); }
+function displayName(p){ return p.id+'：'+p.name+'('+p.area+')'; }
+
+/* ══ アコーディオン（訪問記録内） ══ */
+function toggleAccordion(key){
+  var head=document.getElementById('acc-'+key+'-head');
+  var body=document.getElementById('acc-'+key+'-body');
+  var isOpen=body.classList.contains('open');
+  head.classList.toggle('open',!isOpen);
+  body.classList.toggle('open',!isOpen);
+}
+/* ══ アコーディオン（設定タブ） ══ */
+function toggleSettingAcc(head){
+  var body=head.nextElementSibling;
+  var isOpen=body.classList.contains('open');
+  head.classList.toggle('open',!isOpen);
+  body.classList.toggle('open',!isOpen);
+}
+
+/* ══ バイタル ══ */
+function calcPulsePressure(){
+  var sys=parseInt(document.getElementById('v-bp-sys').value)||0;
+  var dia=parseInt(document.getElementById('v-bp-dia').value)||0;
+  var el=document.getElementById('v-pulse-pressure');
+  if(sys>0&&dia>0){ var pp=sys-dia; el.textContent='脈圧：'+pp+' mmHg'+(pp<40?' ⚠低':''); }
+  else{ el.textContent='脈圧：入力待ち'; }
+}
+
+/* ══ 随伴症状チェックボックス描画 ══ */
+function renderSymptomsChecks(){
+  var c=document.getElementById('v-symptoms-checks'); if(!c) return;
+  c.innerHTML=otherMenus.map(function(m,i){
+    return '<label class="chk-item"><input type="checkbox" class="v-symp-chk" value="'+esc(m)+'"> '+esc(m)+'</label>';
+  }).join('');
+  updateSymptomsBadge();
+}
+function updateSymptomsBadge(){
+  var checks=document.querySelectorAll('.v-symp-chk:checked');
+  var other=document.getElementById('v-symptom-other'); var ov=other?other.value.trim():'';
+  var cnt=checks.length+(ov?1:0);
+  var badge=document.getElementById('acc-symptoms-badge');
+  if(badge){ badge.style.display=cnt?'':'none'; badge.textContent=cnt+'項目'; }
+}
+
+/* ══ 主訴プルダウン ══ */
+function onComplaintChange(){
+  var v=document.getElementById('m-complaint').value;
+  var oth=document.getElementById('m-complaint-other');
+  oth.style.display=(v==='その他')?'block':'none';
+  if(v!=='その他') oth.value='';
+}
+
+/* ══ テンプレート ══ */
+function renderTemplateSelect(){
+  var sel=document.getElementById('v-template');
+  sel.innerHTML='<option value="">テンプレートを選択</option>';
+  templates.forEach(function(t){ var o=document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
+}
+function applyTemplate(){
+  var v=document.getElementById('v-template').value; if(!v) return;
+  var cur=document.getElementById('v-treatment').value.trim();
+  document.getElementById('v-treatment').value=cur?cur+'\n'+v:v;
+  document.getElementById('v-template').value='';
+}
+
+/* ══ 道具（プルダウン方式） ══ */
+var _toolsAdded = [];
+function renderToolsList(){
+  var sel=document.getElementById('tool-sel-name'); if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">道具を選択</option>';
+  tools.forEach(function(t){ var o=document.createElement('option'); o.value=t.name; o.textContent=t.name; sel.appendChild(o); });
+  sel.value=cur;
+  syncToolQty();
+}
+function syncToolQty(){
+  var nameSel=document.getElementById('tool-sel-name');
+  var qtySel=document.getElementById('tool-sel-qty');
+  if(!qtySel) return;
+  var t=tools.find(function(x){ return x.name===(nameSel?nameSel.value:''); });
+  var unit=t?t.unit:'個';
+  qtySel.innerHTML='';
+  for(var n=1;n<=30;n++){ var o=document.createElement('option'); o.value=String(n); o.textContent=n+unit; qtySel.appendChild(o); }
+}
+function addToolEntry(){
+  var nameSel=document.getElementById('tool-sel-name');
+  var qtySel=document.getElementById('tool-sel-qty');
+  var name=nameSel?nameSel.value:'';
+  var qty=qtySel?qtySel.value:'1';
+  if(!name){ toast('道具を選択してください','ng'); return; }
+  var t=tools.find(function(x){ return x.name===name; });
+  var unit=t?t.unit:'個';
+  var ei=_toolsAdded.findIndex(function(x){ return x.name===name; });
+  if(ei>=0){ _toolsAdded[ei].qty=qty; } else { _toolsAdded.push({name:name,qty:qty,unit:unit}); }
+  nameSel.value=''; syncToolQty(); renderToolsAddedList();
+}
+function removeToolEntry(name){
+  _toolsAdded=_toolsAdded.filter(function(x){ return x.name!==name; });
+  renderToolsAddedList();
+}
+function renderToolsAddedList(){
+  var c=document.getElementById('tools-added-list'); if(!c) return;
+  c.innerHTML=_toolsAdded.map(function(x){
+    return '<div class="tool-added-item"><span>'+esc(x.name)+' × '+esc(x.qty)+esc(x.unit)+'</span>'
+      +'<button class="tool-added-del" onclick="removeToolEntry(\''+esc(x.name)+'\')">削除</button></div>';
+  }).join('');
+}
+function getToolsUsed(){ return _toolsAdded.slice(); }
+function resetToolsInputs(){
+  _toolsAdded=[];
+  var s=document.getElementById('tool-sel-name'); if(s) s.value='';
+  syncToolQty(); renderToolsAddedList();
+}
+function setToolsInputs(used){
+  _toolsAdded=used?used.map(function(u){ return {name:u.name,qty:u.qty||'1',unit:u.unit||'個'}; }):[];
+  renderToolsAddedList();
+}
+
+/* ══ 訪問記録 ══ */
+function onVisitPatientChange(){
+  var id=document.getElementById('v-patient').value, box=document.getElementById('visit-ptinfo');
+  if(!id){box.style.display='none';return;}
+  var p=patients.find(function(x){return x.id===id;});
+  if(!p){box.style.display='none';return;}
+  var cc=p.chiefComplaint?(p.chiefComplaint==='その他'&&p.chiefComplaintOther?p.chiefComplaintOther:p.chiefComplaint):'';
+  document.getElementById('vpt-name').textContent=p.id+'：'+p.name+'('+p.area+')';
+  document.getElementById('vpt-id').textContent=(cc?'主訴：'+cc:'主訴未設定')+(p.consentDate?' ／ 同意日：'+p.consentDate:'');
+  box.style.display='block';
+}
+function saveRecord(){
+  var pid=document.getElementById('v-patient').value;
+  var date=document.getElementById('v-date').value;
+  var cond=document.getElementById('v-cond').value;
+  var prog=document.getElementById('v-progress').value;
+  var treat=document.getElementById('v-treatment').value.trim();
+  var memo=document.getElementById('v-memo').value.trim();
+  if(!pid){toast('患者を選択してください','ng');return;}
+  if(!date){toast('日付を入力してください','ng');return;}
+  var pt=patients.find(function(p){return p.id===pid;});
+  /* 随伴症状 */
+  var sympChecked=[]; document.querySelectorAll('.v-symp-chk:checked').forEach(function(cb){sympChecked.push(cb.value);});
+  var sympOther=document.getElementById('v-symptom-other').value.trim(); if(sympOther) sympChecked.push(sympOther);
+  /* バイタル */
+  var bpSys=document.getElementById('v-bp-sys').value;
+  var bpDia=document.getElementById('v-bp-dia').value;
+  var pulse=document.getElementById('v-pulse').value;
+  var temp=document.getElementById('v-temp').value;
+  var pulsePressure=(bpSys&&bpDia)?String(parseInt(bpSys)-parseInt(bpDia)):'';
+  var vitals={bpSys:bpSys,bpDia:bpDia,pulsePressure:pulsePressure,pulse:pulse,temp:temp};
+  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,symptoms:sympChecked.join('・'),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed()};
+  if(_editingRecordId!==null){
+    var idx=records.findIndex(function(r){return r._id===_editingRecordId;});
+    if(idx>=0){ recData._id=_editingRecordId; records[idx]=recData; fbSave('records',recData._id,recData); toast('記録を更新しました','ok'); }
+    cancelRecordEdit();
+  } else {
+    recData._id=uid(); records.unshift(recData); fbSave('records',recData._id,recData); toast('記録を保存しました','ok');
+  }
+  resetVisitForm(); renderList(); setTimeout(function(){gotoTab('list');},350);
+}
+function resetVisitForm(){
+  document.getElementById('v-patient').value=''; document.getElementById('visit-ptinfo').style.display='none';
+  document.getElementById('v-date').value=todayStr(); document.getElementById('v-cond').value='';
+  document.getElementById('v-progress').value=''; document.getElementById('v-treatment').value='';
+  document.getElementById('v-memo').value=''; document.getElementById('v-template').value='';
+  document.querySelectorAll('.v-symp-chk').forEach(function(cb){cb.checked=false;});
+  document.getElementById('v-symptom-other').value='';
+  ['v-bp-sys','v-bp-dia','v-pulse','v-temp'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('v-pulse-pressure').textContent='脈圧：入力待ち';
+  updateSymptomsBadge(); resetToolsInputs();
+}
+function editRecord(id){
+  var r=records.find(function(x){return x._id===id;}); if(!r) return;
+  _editingRecordId=id;
+  document.getElementById('v-patient').value=r.patientId; onVisitPatientChange();
+  document.getElementById('v-date').value=r.date; document.getElementById('v-cond').value=r.condition||'';
+  document.getElementById('v-progress').value=r.progress||''; document.getElementById('v-treatment').value=r.treatment||''; document.getElementById('v-memo').value=r.memo||'';
+  /* 随伴症状 */
+  document.querySelectorAll('.v-symp-chk').forEach(function(cb){cb.checked=false;});
+  if(r.symptoms){ var parts=r.symptoms.split('・'); document.querySelectorAll('.v-symp-chk').forEach(function(cb){if(parts.includes(cb.value))cb.checked=true;}); var custom=parts.filter(function(s){return !otherMenus.includes(s);}); document.getElementById('v-symptom-other').value=custom.join('・'); }
+  /* バイタル */
+  if(r.vitals){ document.getElementById('v-bp-sys').value=r.vitals.bpSys||''; document.getElementById('v-bp-dia').value=r.vitals.bpDia||''; document.getElementById('v-pulse').value=r.vitals.pulse||''; document.getElementById('v-temp').value=r.vitals.temp||''; calcPulsePressure(); }
+  if(r.toolsUsed&&r.toolsUsed.length){ setToolsInputs(r.toolsUsed); }
+  updateSymptomsBadge();
+  document.getElementById('rec-edit-banner-text').textContent=r.date+' / '+(r.displayName||r.patientId)+' の記録を編集中';
+  document.getElementById('rec-edit-banner').classList.add('show'); document.getElementById('save-btn').textContent='✓ 更新する';
+  gotoTab('visit'); window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelRecordEdit(){ _editingRecordId=null; document.getElementById('rec-edit-banner').classList.remove('show'); document.getElementById('save-btn').textContent='✓ 保存する'; resetVisitForm(); }
+function deleteRecord(id){
+  var r=records.find(function(x){return x._id===id;}); if(!r) return;
+  if(!confirm('この記録を削除しますか？\n'+r.date+' / '+(r.displayName||r.patientId))) return;
+  if(!confirm('本当に削除しますか？\nこの操作は取り消せません。')) return;
+  records.splice(records.indexOf(r),1); fbDelete('records',id); renderList(); toast('記録を削除しました','ok');
+}
+
+/* ══ 今月の回数計算 ══ */
+function monthVisitCount(patientId, date, recordId){
+  if(!date) return 0;
+  var ym = date.slice(0,7); // "YYYY-MM"
+  // 同患者・同月の記録を日付昇順に並べ直してから順番を数える
+  var sameMonth = records.filter(function(r){
+    return r.patientId===patientId && r.date && r.date.slice(0,7)===ym;
+  }).sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; });
+  var idx = sameMonth.findIndex(function(r){ return r._id===recordId; });
+  return idx>=0 ? idx+1 : 0;
+}
+
+/* ══ 記録一覧 ══ */
+function renderList(){
+  var c=document.getElementById('rec-list'), fp=document.getElementById('filter-patient').value;
+  var filtered=fp?records.filter(function(r){return r.patientId===fp;}):records;
+  document.getElementById('rec-count').textContent=filtered.length;
+  if(!filtered.length){ c.innerHTML='<div class="empty"><div class="empty-icon">📋</div>記録がありません</div>'; return; }
+  c.innerHTML=filtered.map(function(r){
+    var cc=r.condition==='良好'?'cond-good':r.condition==='不調'?'cond-bad':'cond-normal';
+    var visitNo=monthVisitCount(r.patientId, r.date, r._id);
+    var visitNoHtml=visitNo?'<span style="font-size:11px;color:var(--pine);background:var(--pine-pale);padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:700;">今月'+visitNo+'回目</span>':'';
+    var bc=r.condition==='良好'?'badge-good':r.condition==='不調'?'badge-bad':'badge-normal';
+    var ymd=r.date?r.date.replace(/-/g,function(c,i){return i===4?'年':i===7?'月':''})+'日':'—';
+    var condBadge=r.condition?'<span class="badge '+bc+'">'+esc(r.condition)+'</span>':'';
+    var progH=r.progress?'<div class="rec-row"><strong>経過</strong>'+esc(r.progress)+'</div>':'';
+    var detH=r.symptoms?'<div class="rec-row"><strong>随伴症状</strong>'+esc(r.symptoms)+'</div>':'';
+    var trH=r.treatment?'<div class="rec-treatment">'+esc(r.treatment)+'</div>':'';
+    var meH=r.memo?'<div class="rec-row" style="margin-top:6px;white-space:pre-wrap"><strong>メモ</strong>'+esc(r.memo)+'</div>':'';
+    var tlH=r.toolsUsed&&r.toolsUsed.length?'<div class="rec-row"><strong>道具</strong>'+r.toolsUsed.map(function(t){return esc(t.name)+(t.qty?'×'+esc(t.qty)+esc(t.unit):'');}).join('、')+'</div>':'';
+    var vtH=''; if(r.vitals&&(r.vitals.bpSys||r.vitals.pulse||r.vitals.temp)){ var vp=[]; if(r.vitals.bpSys&&r.vitals.bpDia) vp.push('血圧'+r.vitals.bpSys+'/'+r.vitals.bpDia+(r.vitals.pulsePressure?'（脈圧'+r.vitals.pulsePressure+'）':'')); if(r.vitals.pulse) vp.push('脈拍'+r.vitals.pulse); if(r.vitals.temp) vp.push('体温'+r.vitals.temp+'℃'); vtH='<div class="rec-row"><strong>バイタル</strong>'+esc(vp.join('　'))+'</div>'; }
+    return '<div class="rec-card '+cc+'"><div class="rec-head"><div><div class="rec-name">'+esc(r.displayName||r.patientId)+visitNoHtml+'</div></div><div class="rec-date">'+esc(ymd)+'<br>'+condBadge+'</div></div>'+progH+detH+vtH+trH+tlH+meH+'<div class="rec-actions"><button class="btn btn-sm btn-amber" onclick="editRecord(\''+esc(r._id)+'\')">✏️ 編集</button><button class="btn btn-sm btn-red" onclick="deleteRecord(\''+esc(r._id)+'\')">🗑 削除</button></div></div>';
+  }).join('');
+}
+
+/* ══ CSV出力 ══ */
+function exportCSV(){
+  if(!records.length){toast('出力する記録がありません','ng');return;}
+  var H=['日付','患者ID','表示名','体調','経過','症状','施術内容','メモ','使用道具'];
+  var rows=records.map(function(r){ return [r.date,r.patientId,r.displayName||r.patientId,r.condition||'',r.progress||'',r.detail||'',r.treatment||'',r.memo||'',(r.toolsUsed||[]).map(function(t){return t.name+(t.qty?'×'+t.qty+t.unit:'');}).join('/')].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}); });
+  var csv='\uFEFF'+[H].concat(rows).map(function(r){return r.join(',');}).join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download='visit_records_'+todayStr().replace(/-/g,'')+'.csv'; a.click(); URL.revokeObjectURL(url);
+  toast('CSVをダウンロードしました','ok');
+}
+
+/* ══ 名簿 CSV取込 ══ */
+function loadCSV(e){ var f=e.target.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(ev){processCSV(ev.target.result);}; r.readAsText(f,'UTF-8'); e.target.value=''; }
+function processCSV(text){
+  var lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(function(l){return l.trim();});
+  if(lines.length<2){showCsvMsg('データが見つかりません','err');return;}
+  var hdr=parseLine(lines[0]).map(function(h){return h.trim().toLowerCase();}), iId=hdr.indexOf('id'),iArea=hdr.indexOf('area'),iName=hdr.indexOf('name');
+  if(iId<0){showCsvMsg('"id" 列が見つかりません','err');return;}
+  var added=0,updated=0,errs=[];
+  for(var i=1;i<lines.length;i++){
+    if(!lines[i].trim()) continue;
+    var f=parseLine(lines[i]), id=(f[iId]||'').trim();
+    if(!id){errs.push('行'+(i+1)+'：IDが空');continue;}
+    var nd={id:id,area:iArea>=0?(f[iArea]||'').trim():'',name:iName>=0?(f[iName]||'').trim():''};
+    var ei=patients.findIndex(function(p){return p.id===id;});
+    if(ei>=0){patients.splice(ei,1,nd);updated++;} else{patients.push(nd);added++;}
+  }
+  syncPatientSelects(); renderRosterList(); patients.forEach(function(p){fbSave('patients',p.id,p);});
+  if(errs.length) alert('取込警告：\n'+errs.join('\n'));
+  var msgs=[]; if(added) msgs.push('新規'+added+'件'); if(updated) msgs.push('更新'+updated+'件');
+  if(msgs.length){showCsvMsg(msgs.join('・')+'を取込みました','ok');toast(msgs.join('・')+'処理完了','ok');} else showCsvMsg('処理できるデータがありませんでした','err');
+}
+function showCsvMsg(txt,type){ var el=document.getElementById('csv-msg'); el.className='msg msg-'+(type==='ok'?'ok':'err'); el.textContent=type==='ok'?'✓ '+txt:'✗ '+txt; }
+function parseLine(line){ var res=[],cur='',inQ=false; for(var i=0;i<line.length;i++){ var c=line[i]; if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;} else if(c===','&&!inQ){res.push(cur);cur='';} else cur+=c; } res.push(cur); return res; }
+function dropOver(e){e.preventDefault();document.getElementById('file-drop').classList.add('drag');}
+function dropLeave(){document.getElementById('file-drop').classList.remove('drag');}
+function dropFile(e){ e.preventDefault(); document.getElementById('file-drop').classList.remove('drag'); var f=e.dataTransfer.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(ev){processCSV(ev.target.result);}; r.readAsText(f,'UTF-8'); }
+
+/* ══ 名簿 手動入力 ══ */
+function addManual(){
+  var id=document.getElementById('m-id').value.trim(), area=document.getElementById('m-area').value.trim(), name=document.getElementById('m-name').value.trim();
+  if(!id){toast('IDを入力してください','ng');return;} if(!area){toast('エリアを選択してください','ng');return;} if(!name){toast('ネームを入力してください','ng');return;}
+  var complaint=document.getElementById('m-complaint').value;
+  var complaintOther=document.getElementById('m-complaint-other').value.trim();
+  var consentType=document.querySelector('input[name="m-consent-type"]:checked').value;
+  var consentDate=document.getElementById('m-consent-date').value;
+  var nd={id:id,area:area,name:name,chiefComplaint:complaint,chiefComplaintOther:complaintOther,consentType:consentType,consentDate:consentDate};
+  var ei=patients.findIndex(function(p){return p.id===id;});
+  if(_editingPatientId!==null){
+    /* 編集中：ID変更時に他の患者と重複していないか確認 */
+    if(id!==_editingPatientId && ei>=0){ toast('ID「'+id+'」は既に使われています。別のIDを入力してください','ng'); return; }
+    var oi=patients.findIndex(function(p){return p.id===_editingPatientId;});
+    if(oi>=0) patients.splice(oi,1,nd); else patients.push(nd);
+    fbSave('patients',nd.id,nd); toast(displayName(nd)+' を更新しました','ok');
+  } else {
+    /* 新規登録：重複IDは登録不可 */
+    if(ei>=0){ toast('ID「'+id+'」は既に登録されています。別のIDを使用してください','ng'); return; }
+    patients.push(nd); fbSave('patients',nd.id,nd); toast(displayName(nd)+' を登録しました','ok');
+  }
+  syncPatientSelects(); renderRosterList(); clearManual(); cancelEdit(); gotoSub('view');
+}
+function clearManual(){ ['m-id','m-name','m-consent-date','m-complaint-other'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('m-area').value=''; document.getElementById('m-complaint').value=''; document.getElementById('m-complaint-other').style.display='none'; document.querySelector('input[name="m-consent-type"][value="initial"]').checked=true; }
+function editPatient(id){ var p=patients.find(function(x){return x.id===id;}); if(!p) return; _editingPatientId=id; document.getElementById('m-id').value=p.id; document.getElementById('m-area').value=p.area||''; document.getElementById('m-name').value=p.name; document.getElementById('m-complaint').value=p.chiefComplaint||''; onComplaintChange(); document.getElementById('m-complaint-other').value=p.chiefComplaintOther||''; document.querySelector('input[name="m-consent-type"][value="'+(p.consentType||'initial')+'"]').checked=true; document.getElementById('m-consent-date').value=p.consentDate||''; document.getElementById('edit-banner-text').textContent=displayName(p)+' を編集中'; document.getElementById('edit-banner').classList.add('show'); gotoSub('manual'); window.scrollTo({top:0,behavior:'smooth'}); }
+function cancelEdit(){ _editingPatientId=null; document.getElementById('edit-banner').classList.remove('show'); document.getElementById('edit-banner-text').textContent='編集中'; clearManual(); }
+function deletePatient(id){
+  var p=patients.find(function(x){return x.id===id;}); if(!p) return;
+  var recCount=records.filter(function(r){return r.patientId===id;}).length;
+  var msg=displayName(p)+' を削除しますか？';
+  if(recCount>0) msg+='\n\n⚠ この患者の訪問記録が '+recCount+' 件あります。\n患者を削除しても記録データは残りますが、\n患者名が表示されなくなります。';
+  if(!confirm(msg)) return;
+  if(!confirm('本当に削除しますか？\nこの操作は取り消せません。')) return;
+  patients.splice(patients.indexOf(p),1); fbDelete('patients',id); syncPatientSelects(); renderRosterList(); toast(displayName(p)+' を削除しました','ok');
+}
+function renderRosterList(){
+  var c=document.getElementById('roster-list'); if(!c) return;
+  if(!patients.length){ c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>患者が登録されていません</div>'; return; }
+  var sorted=patients.slice().sort(function(a,b){
+    var ai=parseInt(a.id); var bi=parseInt(b.id);
+    if(!isNaN(ai)&&!isNaN(bi)) return ai-bi;
+    return String(a.id).localeCompare(String(b.id));
+  });
+  c.innerHTML=sorted.map(function(p){
+    var cc=p.chiefComplaint?(p.chiefComplaint==='その他'&&p.chiefComplaintOther?p.chiefComplaintOther:p.chiefComplaint):'';
+    var ct=p.consentType==='re'?'再同意':'初回';
+    var subLines='';
+    if(cc) subLines+='<span class="pt-list-sub-line">主訴：'+esc(cc)+'</span>';
+    if(p.consentDate) subLines+='<span class="pt-list-sub-line">'+esc(ct)+'（'+esc(p.consentDate)+'）</span>';
+    return '<div class="pt-list-card"><div class="pt-list-info"><div class="pt-list-name">'+esc(p.id)+'：'+esc(p.name)+'('+esc(p.area)+')</div>'+(subLines?'<div class="pt-list-sub">'+subLines+'</div>':'')+'</div><div class="pt-list-actions"><button class="btn-edit" onclick="editPatient(\''+esc(p.id)+'\')">編集</button><button class="btn-del" onclick="deletePatient(\''+esc(p.id)+'\')">削除</button></div></div>';
+  }).join('');
+}
+
+/* ══ 設定 ══ */
+async function changePassword(){
+  var cur=document.getElementById('s-pass-cur').value, nw=document.getElementById('s-pass-new').value, nw2=document.getElementById('s-pass-new2').value;
+  /* Firebase優先でパスワード照合 */
+  var saved=localStorage.getItem(APP_PASS_KEY)||'1234';
+  if(_db){
+    try{ var doc=await _db.collection('app_settings').doc('auth').get(); if(doc.exists&&doc.data().password) saved=doc.data().password; }catch(e){}
+  }
+  if(cur!==saved){toast('現在のパスワードが違います','ng');return;}
+  if(!nw){toast('新しいパスワードを入力してください','ng');return;}
+  if(nw!==nw2){toast('新しいパスワードが一致しません','ng');return;}
+  localStorage.setItem(APP_PASS_KEY,nw);
+  if(_db){ await _db.collection('app_settings').doc('auth').set({password:nw}).catch(function(e){console.error('パスワードFirebase保存エラー',e);}); }
+  ['s-pass-cur','s-pass-new','s-pass-new2'].forEach(function(id){document.getElementById(id).value='';});
+  toast('パスワードを変更しました（全端末に反映）','ok');
+}
+function renderTemplateSettings(){ var c=document.getElementById('template-list'); if(!c) return; if(!templates.length){c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">テンプレートがありません</p>';return;} c.innerHTML=templates.map(function(t,i){return '<div class="setting-list-item"><span>'+esc(t)+'</span><div style="display:flex;gap:4px"><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTemplate('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTemplate('+i+',1)" '+(i===templates.length-1?'disabled':'')+'>↓</button><button class="btn btn-sm btn-red" onclick="removeTemplate('+i+')">削除</button></div></div>';}).join(''); }
+function addTemplate(){ var val=document.getElementById('new-template-input').value.trim(); if(!val){toast('テンプレートを入力してください','ng');return;} if(templates.includes(val)){toast('すでに登録済みです','ng');return;} templates.push(val); document.getElementById('new-template-input').value=''; fbSaveSettings(); renderTemplateSelect(); renderTemplateSettings(); toast('"'+val+'" を追加しました','ok'); }
+function removeTemplate(i){ var name=templates[i]; templates.splice(i,1); fbSaveSettings(); renderTemplateSelect(); renderTemplateSettings(); toast('"'+name+'" を削除しました','ok'); }
+function moveTemplate(i,dir){ var j=i+dir; if(j<0||j>=templates.length) return; var tmp=templates[i]; templates[i]=templates[j]; templates[j]=tmp; fbSaveSettings(); renderTemplateSelect(); renderTemplateSettings(); }
+function renderToolsSettings(){ var c=document.getElementById('tools-setting-list'); if(!c) return; if(!tools.length){c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">道具が登録されていません</p>';return;} c.innerHTML=tools.map(function(t,i){return '<div class="setting-list-item"><span>'+esc(t.name)+'　<span style="color:var(--ink3);font-size:12px">単位：'+esc(t.unit)+'</span></span><div style="display:flex;gap:4px"><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTool('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTool('+i+',1)" '+(i===tools.length-1?'disabled':'')+'>↓</button><button class="btn btn-sm btn-red" onclick="removeTool('+i+')">削除</button></div></div>';}).join(''); }
+function addTool(){ var name=document.getElementById('new-tool-name').value.trim(), unit=document.getElementById('new-tool-unit').value.trim()||'個'; if(!name){toast('道具名を入力してください','ng');return;} tools.push({name:name,unit:unit}); document.getElementById('new-tool-name').value=''; document.getElementById('new-tool-unit').value=''; fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を追加しました','ok'); }
+function removeTool(i){ var name=tools[i].name; tools.splice(i,1); fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を削除しました','ok'); }
+function moveTool(i,dir){ var j=i+dir; if(j<0||j>=tools.length) return; var tmp=tools[i]; tools[i]=tools[j]; tools[j]=tmp; fbSaveSettings(); renderToolsList(); renderToolsSettings(); }
+
+/* ══ その他症状メニュー ══ */
+function renderOtherMenuSelect(){ var s=document.getElementById('v-other-sel'); if(!s) return; s.innerHTML='<option value="">メニューから追加</option>'; otherMenus.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; s.appendChild(o); }); }
+function applyOtherMenu(){ var s=document.getElementById('v-other-sel'), inp=document.getElementById('v-other'); var v=s.value; if(!v) return; var cur=inp.value.trim(); inp.value=cur?(cur+'・'+v):v; s.value=''; }
+function renderOtherMenuSettings(){ var c=document.getElementById('other-menu-list'); if(!c) return; if(!otherMenus.length){c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">メニューがありません</p>';return;} c.innerHTML=otherMenus.map(function(m,i){return '<div class="setting-list-item"><span>'+esc(m)+'</span><div style="display:flex;gap:4px"><button class="btn btn-sm" style="padding:6px 10px" onclick="moveOtherMenu('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button><button class="btn btn-sm" style="padding:6px 10px" onclick="moveOtherMenu('+i+',1)" '+(i===otherMenus.length-1?'disabled':'')+'>↓</button><button class="btn btn-sm btn-red" onclick="removeOtherMenu('+i+')">削除</button></div></div>';}).join(''); }
+function addOtherMenu(){ var val=document.getElementById('new-other-menu-input').value.trim(); if(!val){toast('項目を入力してください','ng');return;} if(otherMenus.includes(val)){toast('すでに登録済みです','ng');return;} otherMenus.push(val); document.getElementById('new-other-menu-input').value=''; fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); toast('"'+val+'" を追加しました','ok'); }
+function removeOtherMenu(i){ var name=otherMenus[i]; otherMenus.splice(i,1); fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); toast('"'+name+'" を削除しました','ok'); }
+function moveOtherMenu(i,dir){ var j=i+dir; if(j<0||j>=otherMenus.length) return; var tmp=otherMenus[i]; otherMenus[i]=otherMenus[j]; otherMenus[j]=tmp; fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); }
+
+/* ══ ユーティリティ ══ */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+var _toastTimer=null;
+function toast(msg,type){ var el=document.getElementById('toast'); el.textContent=msg; el.className='show t-'+(type==='ok'?'ok':'ng'); clearTimeout(_toastTimer); _toastTimer=setTimeout(function(){el.className='';},2400); }
+</script>
+</body>
+</html>
