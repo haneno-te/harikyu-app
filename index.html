@@ -544,7 +544,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="list-bar">
     <span class="list-bar-count">記録 <strong id="rec-count">0</strong> 件</span>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btn btn-info btn-sm" onclick="exportCSV()">⬇ CSV出力</button>
+      <button class="btn btn-info btn-sm" onclick="openCsvModal()">⬇ CSV出力</button>
       <button class="btn btn-red btn-sm" onclick="openBulkDeleteModal()">🗑 一括削除</button>
     </div>
   </div>
@@ -552,6 +552,26 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <select id="filter-patient" onchange="renderList()"><option value="">全患者</option></select>
   </div>
   <div id="rec-list"></div>
+</div>
+
+<!-- CSV出力モーダル -->
+<div id="csv-export-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeCsvModal()">
+  <div style="background:var(--paper);border-radius:var(--r) var(--r) 0 0;padding:24px 20px 36px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title">
+      <span>⬇ CSV出力</span>
+      <button class="modal-close" onclick="closeCsvModal()">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:12px;line-height:1.7">出力する記録を選択してください。デフォルトは全選択です。</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span id="csv-sel-count" style="font-size:13px;color:var(--ink2)"></span>
+      <button class="btn btn-sm" style="background:var(--paper2);border:1px solid var(--border2);font-size:13px" onclick="toggleAllCsv()">全選択／全解除</button>
+    </div>
+    <div id="csv-rec-list" style="max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm)"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-info" style="flex:1" onclick="downloadCSV()">⬇ ダウンロード</button>
+      <button class="btn" style="flex:0 0 auto;background:var(--paper2);border:1px solid var(--border2)" onclick="closeCsvModal()">キャンセル</button>
+    </div>
+  </div>
 </div>
 
 <!-- 一括削除モーダル -->
@@ -2026,14 +2046,57 @@ function bulkDeleteAll(){
   uncheckCalendarAfterDelete(allRecords);
 }
 
+/* ══ CSV出力モーダル ══ */
+var csvExportList=[];
+function openCsvModal(){
+  var fp=document.getElementById('filter-patient').value;
+  var filtered=fp?records.filter(function(r){return r.patientId===fp;}):records;
+  if(!filtered.length){toast('出力する記録がありません','ng');return;}
+  csvExportList=filtered.slice().sort(function(a,b){return a.date>b.date?-1:a.date<b.date?1:0;});
+  var list=document.getElementById('csv-rec-list');
+  list.innerHTML=csvExportList.map(function(r){
+    var pt=patients.find(function(p){return p.id===r.patientId;});
+    var label=pt?displayName(pt):(r.displayName||r.patientId);
+    return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--paper)">'
+      +'<input type="checkbox" class="csv-chk" data-id="'+esc(r._id)+'" checked style="width:18px;height:18px;accent-color:var(--pine);flex-shrink:0" onchange="updateCsvCount()">'
+      +'<span style="flex:1;min-width:0">'
+      +'<span style="font-size:13px;font-weight:600">'+esc(label)+'</span>'
+      +'<span style="font-size:12px;color:var(--ink2);margin-left:8px">'+fmtYmd(r.date)+'</span>'
+      +(r.condition?'<span style="font-size:11px;color:var(--ink3);margin-left:6px">'+esc(r.condition)+'</span>':'')
+      +'</span>'
+      +'</label>';
+  }).join('');
+  updateCsvCount();
+  document.getElementById('csv-export-overlay').style.display='flex';
+}
+function closeCsvModal(){document.getElementById('csv-export-overlay').style.display='none';}
+function updateCsvCount(){
+  var total=csvExportList.length;
+  var checked=document.querySelectorAll('#csv-rec-list .csv-chk:checked').length;
+  document.getElementById('csv-sel-count').textContent=checked+'件 ／ 全'+total+'件 選択中';
+}
+function toggleAllCsv(){
+  var chks=document.querySelectorAll('#csv-rec-list .csv-chk');
+  var allChecked=Array.prototype.every.call(chks,function(c){return c.checked;});
+  chks.forEach(function(c){c.checked=!allChecked;});
+  updateCsvCount();
+}
+function downloadCSV(){
+  var selectedIds=Array.prototype.map.call(document.querySelectorAll('#csv-rec-list .csv-chk:checked'),function(c){return c.dataset.id;});
+  if(!selectedIds.length){toast('記録が選択されていません','ng');return;}
+  var recs=csvExportList.filter(function(r){return selectedIds.indexOf(r._id)>=0;});
+  exportCSV(recs);
+  closeCsvModal();
+}
+
 /* ══ CSV出力 ══ */
-function exportCSV(){
-  if(!records.length){toast('出力する記録がありません','ng');return;}
+function exportCSV(recs){
+  if(!recs||!recs.length){toast('出力する記録がありません','ng');return;}
   var maxTools=0;
-  records.forEach(function(r){ if(r.toolsUsed&&r.toolsUsed.length>maxTools) maxTools=r.toolsUsed.length; });
+  recs.forEach(function(r){ if(r.toolsUsed&&r.toolsUsed.length>maxTools) maxTools=r.toolsUsed.length; });
   var H=['日付','患者ID','表示名','体調','主訴状況','経過','随伴症状','施術内容','メモ','血圧上','血圧下','脈圧','脈拍','体温'];
   for(var t=1;t<=maxTools;t++){ H.push('道具'+t+'名称'); H.push('道具'+t+'数量'); }
-  var rows=records.map(function(r){
+  var rows=recs.map(function(r){
     var v=r.vitals||{};
     var row=[r.date||'',r.patientId||'',r.displayName||r.patientId||'',r.condition||'',r.chiefStatus||'',r.progress||'',r.symptoms||'',r.treatment||'',r.memo||'',v.bpSys||'',v.bpDia||'',v.pulsePressure||'',v.pulse||'',v.temp||''];
     var tools=r.toolsUsed||[];
@@ -2043,7 +2106,7 @@ function exportCSV(){
   var csv='\uFEFF'+[H].concat(rows).map(function(r){return r.join(',');}).join('\r\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url; a.download='visit_records_'+todayStr().replace(/-/g,'')+'.csv'; a.click(); URL.revokeObjectURL(url);
-  toast('CSVをダウンロードしました','ok');
+  toast('CSVをダウンロードしました（'+recs.length+'件）','ok');
 }
 
 /* ══ 名簿 CSV取込 ══ */
