@@ -484,6 +484,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             <option value="">症状を選択</option>
           </select>
           <select id="v-symp-prog-sel" style="flex:1;min-width:90px;padding:8px 10px;font-size:14px;border:1.5px solid var(--border2);border-radius:var(--r-sm);background:var(--paper)">
+            <option value="">─（なし）</option>
             <option value="初回">初回</option>
             <option value="維持">維持</option>
             <option value="改善">改善</option>
@@ -1104,7 +1105,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="detail-content"></div>
     <div id="detail-record-btn-area" style="margin-top:12px;display:none">
       <button class="btn btn-pine btn-full" onclick="goRecordFromCal()" id="detail-record-btn" style="font-size:15px;padding:14px">📝 訪問記録を入力</button>
-      <div id="detail-recorded-badge" style="display:none;background:var(--pine-pale);border:1.5px solid var(--pine-mid);border-radius:var(--r-sm);padding:10px 14px;text-align:center;font-size:14px;font-weight:700;color:var(--pine)">✅ 記録済み</div>
+      <button id="detail-recorded-badge" onclick="goViewRecordFromCal()" style="display:none;background:var(--pine-pale);border:1.5px solid var(--pine-mid);border-radius:var(--r-sm);padding:10px 14px;text-align:center;font-size:14px;font-weight:700;color:var(--pine);width:100%;cursor:pointer">✅ 記録済み　— 記録を確認 ›</button>
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn btn-full" onclick="editFromDetail()" style="flex:1">編集</button>
@@ -1368,7 +1369,7 @@ function renderSymptomEntries(){
   c.innerHTML=symptomEntries.map(function(e,i){
     return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;background:var(--paper2);border-radius:var(--r-sm);padding:6px 10px">'
       +'<span style="flex:1;font-size:14px">'+esc(e.symptom)+'</span>'
-      +'<span style="font-size:12px;color:var(--pine);font-weight:700;background:var(--pine-pale);padding:2px 8px;border-radius:10px">'+esc(e.progress)+'</span>'
+      +'<span style="font-size:12px;color:var(--pine);font-weight:700;background:var(--pine-pale);padding:2px 8px;border-radius:10px">'+(e.progress?esc(e.progress):'─')+'</span>'
       +'<button onclick="removeSymptomEntry('+i+')" style="border:none;background:none;color:var(--ink3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>'
       +'</div>';
   }).join('');
@@ -1380,7 +1381,7 @@ function addSymptomEntry(){
   if(!symp){toast('症状を選択してください','ng');return;}
   symptomEntries.push({symptom:symp,progress:prog});
   document.getElementById('v-symp-sel').value='';
-  document.getElementById('v-symp-prog-sel').value='初回';
+  document.getElementById('v-symp-prog-sel').value='';
   renderSymptomEntries();
 }
 function removeSymptomEntry(i){
@@ -2191,7 +2192,7 @@ function removeTemplate(i){ var name=templates[i]; templates.splice(i,1); fbSave
 function moveTemplate(i,dir){ var j=i+dir; if(j<0||j>=templates.length) return; var tmp=templates[i]; templates[i]=templates[j]; templates[j]=tmp; fbSaveSettings(); renderTemplateSelect(); renderTemplateSettings(); }
 function renderToolsSettings(){ var c=document.getElementById('tools-setting-list'); if(!c) return; if(!tools.length){c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">道具が登録されていません</p>';return;} c.innerHTML=tools.map(function(t,i){return '<div class="setting-list-item"><span>'+esc(t.name)+'　<span style="color:var(--ink3);font-size:12px">単位：'+esc(t.unit)+'</span></span><div style="display:flex;gap:4px"><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTool('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTool('+i+',1)" '+(i===tools.length-1?'disabled':'')+'>↓</button><button class="btn btn-sm btn-red" onclick="removeTool('+i+')">削除</button></div></div>';}).join(''); }
 function addTool(){ var name=document.getElementById('new-tool-name').value.trim(), unit=document.getElementById('new-tool-unit').value.trim()||'個'; if(!name){toast('道具名を入力してください','ng');return;} tools.push({name:name,unit:unit}); document.getElementById('new-tool-name').value=''; document.getElementById('new-tool-unit').value=''; fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を追加しました','ok'); }
-function removeTool(i){ var name=tools[i].name; tools.splice(i,1); fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を削除しました','ok'); }
+function removeTool(i){ var name=tools[i].name; if(!confirm('"'+name+'" を削除しますか？')) return; tools.splice(i,1); fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を削除しました','ok'); }
 function moveTool(i,dir){ var j=i+dir; if(j<0||j>=tools.length) return; var tmp=tools[i]; tools[i]=tools[j]; tools[j]=tmp; fbSaveSettings(); renderToolsList(); renderToolsSettings(); }
 
 /* ══ その他症状メニュー ══ */
@@ -2199,7 +2200,7 @@ function renderOtherMenuSelect(){ var s=document.getElementById('v-other-sel'); 
 function applyOtherMenu(){ var s=document.getElementById('v-other-sel'), inp=document.getElementById('v-other'); var v=s.value; if(!v) return; var cur=inp.value.trim(); inp.value=cur?(cur+'・'+v):v; s.value=''; }
 function renderOtherMenuSettings(){ var c=document.getElementById('other-menu-list'); if(!c) return; if(!otherMenus.length){c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">メニューがありません</p>';return;} c.innerHTML=otherMenus.map(function(m,i){return '<div class="setting-list-item"><span>'+esc(m)+'</span><div style="display:flex;gap:4px"><button class="btn btn-sm" style="padding:6px 10px" onclick="moveOtherMenu('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button><button class="btn btn-sm" style="padding:6px 10px" onclick="moveOtherMenu('+i+',1)" '+(i===otherMenus.length-1?'disabled':'')+'>↓</button><button class="btn btn-sm btn-red" onclick="removeOtherMenu('+i+')">削除</button></div></div>';}).join(''); }
 function addOtherMenu(){ var val=document.getElementById('new-other-menu-input').value.trim(); if(!val){toast('項目を入力してください','ng');return;} if(otherMenus.includes(val)){toast('すでに登録済みです','ng');return;} otherMenus.push(val); document.getElementById('new-other-menu-input').value=''; fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); toast('"'+val+'" を追加しました','ok'); }
-function removeOtherMenu(i){ var name=otherMenus[i]; otherMenus.splice(i,1); fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); toast('"'+name+'" を削除しました','ok'); }
+function removeOtherMenu(i){ var name=otherMenus[i]; if(!confirm('"'+name+'" を削除しますか？')) return; otherMenus.splice(i,1); fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); toast('"'+name+'" を削除しました','ok'); }
 function moveOtherMenu(i,dir){ var j=i+dir; if(j<0||j>=otherMenus.length) return; var tmp=otherMenus[i]; otherMenus[i]=otherMenus[j]; otherMenus[j]=tmp; fbSaveSettings(); renderOtherMenuSelect(); renderOtherMenuSettings(); renderSymptomsChecks(); }
 
 /* ══ ユーティリティ ══ */
@@ -3189,7 +3190,7 @@ function saveSchedule(){
   var repeat=document.getElementById('inp-repeat').value;
   data.repeat=repeat;
 
-  if(calEditingId||repeat==='none'){
+  if(repeat==='none'){
     saveScheduleToDb(data,calEditingId).then(function(){
       calShowToast(calEditingId?'予定を更新しました':'予定を追加しました');
       closeAddModal();
@@ -3201,6 +3202,12 @@ function saveSchedule(){
   var months=repeat==='weekly_1m'?1:repeat==='weekly_3m'?3:6;
   var repeatId='rep_'+Date.now().toString(36);
   var baseDate=fromYMD(date);
+  // 編集中の場合：既存イベントを更新し、翌週以降を繰り返し登録する
+  var _editingForRepeat=calEditingId;
+  if(_editingForRepeat){
+    saveScheduleToDb(Object.assign({},data,{repeat:'none'}),_editingForRepeat);
+    baseDate.setDate(baseDate.getDate()+7);
+  }
   var endYear=baseDate.getFullYear(),endMonth=baseDate.getMonth()+(months-1);
   if(endMonth>11){endYear+=Math.floor(endMonth/12);endMonth=endMonth%12;}
   var lastDay=new Date(endYear,endMonth+1,0).getDate();
@@ -3228,7 +3235,7 @@ function saveSchedule(){
       return saveScheduleToDb(rd,null);
     });
     Promise.all(promises).then(function(){
-      calShowToast(saved+'件の予定を登録しました');
+      calShowToast(_editingForRepeat?'予定を更新し、'+saved+'件を追加しました':saved+'件の予定を登録しました');
       closeAddModal();
     });
     return;
@@ -3356,6 +3363,8 @@ function openDetailModal(id){
     if(ev.recorded){
       recordBtn.style.display='none';
       recordedBadge.style.display='block';
+      var _matchRec=records.find(function(r){return r.patientId==ev.patientId && r.date===ev.date;});
+      window._calDetailRecordId=_matchRec?_matchRec._id:null;
     } else {
       recordBtn.style.display='block';
       recordedBadge.style.display='none';
@@ -3366,6 +3375,25 @@ function openDetailModal(id){
   document.getElementById('detail-modal-overlay').classList.add('open');
 }
 function closeDetailModal(){ document.getElementById('detail-modal-overlay').classList.remove('open'); calDetailId=null; }
+function goViewRecordFromCal(){
+  var recId=window._calDetailRecordId;
+  var ev=schedules.find(function(s){return s._id===calDetailId;});
+  closeDetailModal();
+  gotoTab('list');
+  setTimeout(function(){
+    if(ev&&ev.patientId){
+      var fp=document.getElementById('filter-patient');
+      if(fp) fp.value=ev.patientId;
+    }
+    renderList();
+    setTimeout(function(){
+      if(recId){
+        var el=document.getElementById('rd-'+recId);
+        if(el){ el.style.display='block'; var btn=document.getElementById('rdb-'+recId); if(btn) btn.textContent='閉じる'; el.scrollIntoView({behavior:'smooth',block:'center'}); }
+      }
+    },80);
+  },100);
+}
 function goRecordFromCal(){
   var ev=schedules.find(function(s){return s._id===calDetailId;});
   if(!ev) return;
