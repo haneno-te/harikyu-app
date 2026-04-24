@@ -536,6 +536,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
       <div id="tools-added-list"></div>
     </div>
+    <div class="fld" style="display:flex;align-items:center;gap:10px;padding:6px 0 2px">
+      <input type="checkbox" id="v-exclude-csv" style="width:18px;height:18px;accent-color:var(--red);flex-shrink:0;cursor:pointer">
+      <label for="v-exclude-csv" style="font-size:13px;color:var(--ink2);cursor:pointer;line-height:1.5">CSVから外す<span style="font-size:11px;color:var(--ink3);margin-left:4px">（一覧には表示・CSV出力の初期選択から除外）</span></label>
+    </div>
     <button class="btn btn-pine btn-full" id="save-btn" onclick="saveRecord()" style="margin-top:4px">✓ 保存する</button>
   </div>
 </div>
@@ -561,12 +565,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <span>⬇ CSV出力</span>
       <button class="modal-close" onclick="closeCsvModal()">✕</button>
     </div>
-    <p style="font-size:13px;color:var(--ink2);margin-bottom:12px;line-height:1.7">出力する記録を選択してください。デフォルトは全選択です。</p>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:12px;line-height:1.7">「CSVから外す」にした記録は初期状態でチェックが外れています。</p>
+    <!-- フィルタタブ -->
+    <div style="display:flex;gap:4px;margin-bottom:10px">
+      <button id="csv-filter-all" class="btn btn-sm" style="flex:1;font-size:12px;background:var(--pine);color:#fff;border:none" onclick="setCsvFilter('all')">全件 <span id="csv-cnt-all" style="font-size:11px;opacity:.85"></span></button>
+      <button id="csv-filter-include" class="btn btn-sm" style="flex:1;font-size:12px;background:var(--paper2);border:1px solid var(--border2)" onclick="setCsvFilter('include')">出力予定 <span id="csv-cnt-include" style="font-size:11px;opacity:.85"></span></button>
+      <button id="csv-filter-exclude" class="btn btn-sm" style="flex:1;font-size:12px;background:var(--paper2);border:1px solid var(--border2)" onclick="setCsvFilter('exclude')">除外 <span id="csv-cnt-exclude" style="font-size:11px;opacity:.85"></span></button>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <span id="csv-sel-count" style="font-size:13px;color:var(--ink2)"></span>
       <button class="btn btn-sm" style="background:var(--paper2);border:1px solid var(--border2);font-size:13px" onclick="toggleAllCsv()">全選択／全解除</button>
     </div>
-    <div id="csv-rec-list" style="max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm)"></div>
+    <div id="csv-rec-list" style="max-height:46vh;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm)"></div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-info" style="flex:1" onclick="downloadCSV()">⬇ ダウンロード</button>
       <button class="btn" style="flex:0 0 auto;background:var(--paper2);border:1px solid var(--border2)" onclick="closeCsvModal()">キャンセル</button>
@@ -1592,7 +1602,8 @@ function saveRecord(){
   var temp=document.getElementById('v-temp').value;
   var pulsePressure=(bpSys&&bpDia)?String(parseInt(bpSys)-parseInt(bpDia)):'';
   var vitals={bpSys:bpSys,bpDia:bpDia,pulsePressure:pulsePressure,pulse:pulse,temp:temp};
-  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,chiefStatus:chiefStatus,symptoms:sympText,symptomEntries:symptomEntries.slice(),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed()};
+  var excludeCsv=document.getElementById('v-exclude-csv').checked;
+  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,chiefStatus:chiefStatus,symptoms:sympText,symptomEntries:symptomEntries.slice(),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed(),excludeFromCsv:excludeCsv};
   if(_editingRecordId!==null){
     var idx=records.findIndex(function(r){return r._id===_editingRecordId;});
     if(idx>=0){ recData._id=_editingRecordId; records[idx]=recData; fbSave('records',recData._id,recData); toast('記録を更新しました','ok'); }
@@ -1620,6 +1631,7 @@ function resetVisitForm(){
   document.getElementById('v-date').value=todayStr(); document.getElementById('v-cond').value='';
   document.getElementById('v-progress').value=''; document.getElementById('v-chief-status').value=''; document.getElementById('v-treatment').value='';
   document.getElementById('v-memo').value=''; document.getElementById('v-template').value='';
+  document.getElementById('v-exclude-csv').checked=false;
   symptomEntries=[];
   document.getElementById('v-symptom-other').value='';
   renderSymptomEntries();
@@ -1642,6 +1654,7 @@ function editRecord(id){
   /* バイタル */
   if(r.vitals){ document.getElementById('v-bp-sys').value=r.vitals.bpSys||''; document.getElementById('v-bp-dia').value=r.vitals.bpDia||''; document.getElementById('v-pulse').value=r.vitals.pulse||''; document.getElementById('v-temp').value=r.vitals.temp||''; calcPulsePressure(); }
   if(r.toolsUsed&&r.toolsUsed.length){ setToolsInputs(r.toolsUsed); }
+  document.getElementById('v-exclude-csv').checked=r.excludeFromCsv||false;
   updateSymptomsBadge();
   document.getElementById('rec-edit-banner-text').textContent=r.date+' / '+(r.displayName||r.patientId)+' の記録を編集中';
   document.getElementById('rec-edit-banner').classList.add('show'); document.getElementById('save-btn').textContent='✓ 更新する';
@@ -2048,32 +2061,74 @@ function bulkDeleteAll(){
 
 /* ══ CSV出力モーダル ══ */
 var csvExportList=[];
+var _csvFilter='all';
 function openCsvModal(){
   var fp=document.getElementById('filter-patient').value;
   var filtered=fp?records.filter(function(r){return r.patientId===fp;}):records;
   if(!filtered.length){toast('出力する記録がありません','ng');return;}
   csvExportList=filtered.slice().sort(function(a,b){return a.date>b.date?-1:a.date<b.date?1:0;});
-  var list=document.getElementById('csv-rec-list');
-  list.innerHTML=csvExportList.map(function(r){
-    var pt=patients.find(function(p){return p.id===r.patientId;});
-    var label=pt?displayName(pt):(r.displayName||r.patientId);
-    return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--paper)">'
-      +'<input type="checkbox" class="csv-chk" data-id="'+esc(r._id)+'" checked style="width:18px;height:18px;accent-color:var(--pine);flex-shrink:0" onchange="updateCsvCount()">'
-      +'<span style="flex:1;min-width:0">'
-      +'<span style="font-size:13px;font-weight:600">'+esc(label)+'</span>'
-      +'<span style="font-size:12px;color:var(--ink2);margin-left:8px">'+fmtYmd(r.date)+'</span>'
-      +(r.condition?'<span style="font-size:11px;color:var(--ink3);margin-left:6px">'+esc(r.condition)+'</span>':'')
-      +'</span>'
-      +'</label>';
-  }).join('');
+  _csvFilter='all';
+  renderCsvList();
+  updateCsvFilterTabs();
   updateCsvCount();
   document.getElementById('csv-export-overlay').style.display='flex';
 }
+function renderCsvList(){
+  var list=document.getElementById('csv-rec-list');
+  var shown=csvExportList.filter(function(r){
+    if(_csvFilter==='include') return !r.excludeFromCsv;
+    if(_csvFilter==='exclude') return !!r.excludeFromCsv;
+    return true;
+  });
+  list.innerHTML=shown.length?shown.map(function(r){
+    var pt=patients.find(function(p){return p.id===r.patientId;});
+    var label=pt?displayName(pt):(r.displayName||r.patientId);
+    var isExcluded=!!r.excludeFromCsv;
+    var bg=isExcluded?'background:var(--red-pale,#fff0f0)':'background:var(--paper)';
+    var checkedAttr=isExcluded?'':' checked';
+    return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;'+bg+'">'
+      +'<input type="checkbox" class="csv-chk" data-id="'+esc(r._id)+'"'+checkedAttr+' style="width:18px;height:18px;accent-color:var(--pine);flex-shrink:0" onchange="updateCsvCount()">'
+      +'<span style="flex:1;min-width:0">'
+      +'<span style="font-size:13px;font-weight:600;'+(isExcluded?'color:var(--ink3)':'')+'">'+esc(label)+'</span>'
+      +'<span style="font-size:12px;color:var(--ink2);margin-left:8px">'+fmtYmd(r.date)+'</span>'
+      +(r.condition?'<span style="font-size:11px;color:var(--ink3);margin-left:6px">'+esc(r.condition)+'</span>':'')
+      +(isExcluded?'<span style="font-size:10px;background:var(--red,#e53);color:#fff;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:middle">除外</span>':'')
+      +'</span>'
+      +'</label>';
+  }).join(''):'<div style="padding:20px;text-align:center;color:var(--ink3);font-size:13px">該当する記録がありません</div>';
+}
+function setCsvFilter(type){
+  _csvFilter=type;
+  renderCsvList();
+  updateCsvFilterTabs();
+  updateCsvCount();
+}
+function updateCsvFilterTabs(){
+  var total=csvExportList.length;
+  var excludedCnt=csvExportList.filter(function(r){return !!r.excludeFromCsv;}).length;
+  var includeCnt=total-excludedCnt;
+  document.getElementById('csv-cnt-all').textContent='('+total+')';
+  document.getElementById('csv-cnt-include').textContent='('+includeCnt+')';
+  document.getElementById('csv-cnt-exclude').textContent='('+excludedCnt+')';
+  ['all','include','exclude'].forEach(function(t){
+    var btn=document.getElementById('csv-filter-'+t);
+    if(t===_csvFilter){
+      btn.style.background='var(--pine)'; btn.style.color='#fff'; btn.style.border='none';
+    } else {
+      btn.style.background='var(--paper2)'; btn.style.color=''; btn.style.border='1px solid var(--border2)';
+    }
+  });
+}
 function closeCsvModal(){document.getElementById('csv-export-overlay').style.display='none';}
 function updateCsvCount(){
-  var total=csvExportList.length;
+  var shown=csvExportList.filter(function(r){
+    if(_csvFilter==='include') return !r.excludeFromCsv;
+    if(_csvFilter==='exclude') return !!r.excludeFromCsv;
+    return true;
+  });
+  var total=shown.length;
   var checked=document.querySelectorAll('#csv-rec-list .csv-chk:checked').length;
-  document.getElementById('csv-sel-count').textContent=checked+'件 ／ 全'+total+'件 選択中';
+  document.getElementById('csv-sel-count').textContent=checked+'件 ／ '+total+'件 選択中';
 }
 function toggleAllCsv(){
   var chks=document.querySelectorAll('#csv-rec-list .csv-chk');
