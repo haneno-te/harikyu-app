@@ -2211,7 +2211,7 @@ function addManual(){
     if(id!==_editingPatientId && ei>=0){ toast('ID「'+id+'」は既に使われています。別のIDを入力してください','ng'); return; }
     var recCount=records.filter(function(r){return r.patientId===_editingPatientId;}).length;
     var confirmMsg='「'+displayName(nd)+'」に上書きしてよろしいですか？';
-    if(recCount>0) confirmMsg+='\n\n⚠ この患者の訪問記録が '+recCount+' 件あります。\n記録の患者IDも合わせて更新されます。';
+    if(recCount>0) confirmMsg+='\n\n⚠ この患者の訪問記録が '+recCount+' 件あります。\n記録・カレンダー予定の患者IDも合わせて更新されます。';
     if(!confirm(confirmMsg)) return;
     if(id!==_editingPatientId){
       fbDelete('patients',_editingPatientId);
