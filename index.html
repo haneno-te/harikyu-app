@@ -3595,23 +3595,41 @@ function copyFromDetail(){
   document.getElementById('edit-actions').style.display='none';
   document.getElementById('add-modal-overlay').classList.add('open');
 }
-function deleteFromDetail(){ if(!calDetailId) return; if(!confirm('この予定を削除しますか？')) return; if(!confirm('削除したら元に戻せません。本当に削除しますか？')) return; deleteScheduleFromDb(calDetailId); closeDetailModal(); }
+function deleteFromDetail(){
+  if(!calDetailId) return;
+  if(!confirm('この予定を削除しますか？')) return;
+  if(!confirm('削除したら元に戻せません。本当に削除しますか？')) return;
+  var _ev=schedules.find(function(s){return s._id===calDetailId;});
+  if(_ev) deleteRecordsLinkedToSchedules([_ev]);
+  deleteScheduleFromDb(calDetailId);
+  closeDetailModal();
+}
 
 /* ════════════════════════════════
    削除
 ════════════════════════════════ */
-function deleteThisOnly(){ if(!calEditingId) return; if(!confirm('この日の予定を削除しますか？')) return; if(!confirm('削除したら元に戻せません。本当に削除しますか？')) return; deleteScheduleFromDb(calEditingId); closeAddModal(); }
+function deleteThisOnly(){
+  if(!calEditingId) return;
+  if(!confirm('この日の予定を削除しますか？')) return;
+  if(!confirm('削除したら元に戻せません。本当に削除しますか？')) return;
+  var _ev=schedules.find(function(s){return s._id===calEditingId;});
+  if(_ev) deleteRecordsLinkedToSchedules([_ev]);
+  deleteScheduleFromDb(calEditingId);
+  closeAddModal();
+}
 function deleteAllRepeat(){
   if(!calEditingId) return;
   var ev=schedules.find(function(s){return s._id===calEditingId;});
   if(!ev||!ev.repeatId){
     if(!confirm('この予定を削除しますか？')) return;
     if(!confirm('削除したら元に戻せません。本当に削除しますか？')) return;
+    deleteRecordsLinkedToSchedules([ev]);
     deleteScheduleFromDb(calEditingId);closeAddModal();return;
   }
   if(!confirm('繰り返し予定をすべて削除しますか？')) return;
   if(!confirm('削除したら元に戻せません。本当に削除しますか？')) return;
   var targets=schedules.filter(function(s){return s.repeatId===ev.repeatId;});
+  deleteRecordsLinkedToSchedules(targets);
   targets.forEach(function(s){deleteScheduleFromDb(s._id);});
   closeAddModal();
 }
