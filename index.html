@@ -2216,6 +2216,7 @@ function addManual(){
     if(id!==_editingPatientId){
       fbDelete('patients',_editingPatientId);
       records.forEach(function(r){ if(r.patientId===_editingPatientId){ r.patientId=id; r.displayName=displayName(nd); fbSave('records',r._id,r); } });
+      schedules.forEach(function(s){ if(s.patientId===_editingPatientId){ s.patientId=id; s.displayName=displayName(nd); fbSave('schedules',s._id,s); } });
     }
     var oi=patients.findIndex(function(p){return p.id===_editingPatientId;});
     if(oi>=0) patients.splice(oi,1,nd); else patients.push(nd);
