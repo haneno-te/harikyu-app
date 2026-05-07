@@ -2250,6 +2250,17 @@ function deletePatient(id){
   }
   patients.splice(patients.indexOf(p),1); fbDelete('patients',id); syncPatientSelects(); renderRosterList(); renderList(); toast(name+' を削除しました','ok');
   if(typeof calBuildPatientSelect==='function'){ calBuildPatientSelect(); calBuildPvPatientSelect(); }
+  /* カレンダー予定を削除（患者・記録の削除選択に関わらず常に確認） */
+  var linkedScheds=schedules.filter(function(s){return s.patientId===id;});
+  if(linkedScheds.length>0){
+    if(confirm(name+' のカレンダー予定が '+linkedScheds.length+' 件あります。\n合わせて削除しますか？')){
+      linkedScheds.forEach(function(s){
+        schedules.splice(schedules.indexOf(s),1);
+        deleteScheduleFromDbSilent(s._id);
+      });
+      if(typeof calRender==='function') calRender();
+    }
+  }
 }
 function openPatientDeleteModal(id,name,recCount){
   var overlay=document.getElementById('patient-delete-overlay');
@@ -3304,6 +3315,11 @@ function saveSchedule(){
     flagged:document.getElementById('inp-flagged').checked?true:false,
     updatedAt:new Date().toISOString()
   };
+  /* 編集時は既存の recorded フラグを引き継ぐ（.set()で上書きされるため明示的にコピー） */
+  if(calEditingId){
+    var _existingEv=schedules.find(function(s){return s._id===calEditingId;});
+    if(_existingEv) data.recorded=!!_existingEv.recorded;
+  }
 
   var repeat=document.getElementById('inp-repeat').value;
   data.repeat=repeat;
@@ -3348,7 +3364,7 @@ function saveSchedule(){
     // 重複なし→即保存
     var saved=0;
     var promises=allDates.map(function(dStr){
-      var rd=Object.assign({},data,{date:dStr,repeatId:repeatId});
+      var rd=Object.assign({},data,{date:dStr,repeatId:repeatId,recorded:false});
       saved++;
       return saveScheduleToDb(rd,null);
     });
@@ -3360,7 +3376,7 @@ function saveSchedule(){
   }
 
   // 重複あり→個別確認モーダルを開く
-  rcPendingData=Object.assign({},data,{repeatId:repeatId});
+  rcPendingData=Object.assign({},data,{repeatId:repeatId,recorded:false});
   rcItems=conflictItems;
   closeAddModal();
   openRepeatConflictModal();
