@@ -1615,7 +1615,10 @@ function saveRecord(){
   if(window._calSchedIdForRecord){
     var sid=window._calSchedIdForRecord;
     var sev=schedules.find(function(s){return s._id===sid;});
-    if(sev){ sev.recorded=true; fbSave('schedules',sid,sev); }
+    /* 保存する記録の患者・日付が元の予定と一致する場合のみ recorded=true を書き込む */
+    if(sev && sev.patientId===pid && sev.date===date){
+      sev.recorded=true; fbSave('schedules',sid,sev);
+    }
     window._calSchedIdForRecord=null;
     /* バナーリセット */
     var banner=document.getElementById('rec-edit-banner');
