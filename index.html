@@ -535,19 +535,27 @@ textarea.expandable:focus {
       <label class="fld-label" for="v-memo">所見・メモ</label>
       <textarea id="v-memo" class="expandable" placeholder="気になること、変化など" style="min-height:64px"></textarea>
     </div>
-    <div class="fld">
-      <label class="fld-label">施術部位</label>
-      <div id="v-body-parts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
-        <label class="chk-item"><input type="checkbox" value="頭部" onchange="updateBodyPartsBadge()">頭部</label>
-        <label class="chk-item"><input type="checkbox" value="耳介" onchange="updateBodyPartsBadge()">耳介</label>
-        <label class="chk-item"><input type="checkbox" value="頸部" onchange="updateBodyPartsBadge()">頸部</label>
-        <label class="chk-item"><input type="checkbox" value="上肢" onchange="updateBodyPartsBadge()">上肢</label>
-        <label class="chk-item"><input type="checkbox" value="下肢" onchange="updateBodyPartsBadge()">下肢</label>
-        <label class="chk-item"><input type="checkbox" value="胸部" onchange="updateBodyPartsBadge()">胸部</label>
-        <label class="chk-item"><input type="checkbox" value="腹部" onchange="updateBodyPartsBadge()">腹部</label>
-        <label class="chk-item"><input type="checkbox" value="背部" onchange="updateBodyPartsBadge()">背部</label>
-        <label class="chk-item"><input type="checkbox" value="全身" onchange="updateBodyPartsBadge()">全身</label>
-        <label class="chk-item"><input type="checkbox" value="その他" onchange="updateBodyPartsBadge()">その他</label>
+    <div class="accordion" style="margin-bottom:14px">
+      <div class="accordion-head" id="acc-bodyparts-head" onclick="toggleAccordion('bodyparts')" style="align-items:flex-start">
+        <span style="display:flex;flex-direction:column;gap:3px">
+          <span>施術部位<span class="acc-badge" id="acc-bodyparts-badge" style="display:none"></span></span>
+          <span id="acc-bodyparts-prev" style="display:none;font-size:11px;font-weight:500;color:var(--ink3);line-height:1.5"></span>
+        </span>
+        <span class="accordion-arrow" style="margin-top:2px">▼</span>
+      </div>
+      <div class="accordion-body" id="acc-bodyparts-body">
+        <div id="v-body-parts" style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0">
+          <label class="chk-item"><input type="checkbox" value="頭部" onchange="updateBodyPartsBadge()">頭部</label>
+          <label class="chk-item"><input type="checkbox" value="耳介" onchange="updateBodyPartsBadge()">耳介</label>
+          <label class="chk-item"><input type="checkbox" value="頸部" onchange="updateBodyPartsBadge()">頸部</label>
+          <label class="chk-item"><input type="checkbox" value="上肢" onchange="updateBodyPartsBadge()">上肢</label>
+          <label class="chk-item"><input type="checkbox" value="下肢" onchange="updateBodyPartsBadge()">下肢</label>
+          <label class="chk-item"><input type="checkbox" value="胸部" onchange="updateBodyPartsBadge()">胸部</label>
+          <label class="chk-item"><input type="checkbox" value="腹部" onchange="updateBodyPartsBadge()">腹部</label>
+          <label class="chk-item"><input type="checkbox" value="背部" onchange="updateBodyPartsBadge()">背部</label>
+          <label class="chk-item"><input type="checkbox" value="全身" onchange="updateBodyPartsBadge()">全身</label>
+          <label class="chk-item"><input type="checkbox" value="その他" onchange="updateBodyPartsBadge()">その他</label>
+        </div>
       </div>
     </div>
     <div class="fld">
@@ -558,6 +566,19 @@ textarea.expandable:focus {
         <button type="button" class="btn btn-sm btn-pine" onclick="addToolEntry()">＋ 追加</button>
       </div>
       <div id="tools-added-list"></div>
+    </div>
+    <div class="fld">
+      <label class="fld-label">電療機器</label>
+      <div class="tools-row">
+        <select id="et-sel-device" onchange="syncEtTemplates()" style="flex:1">
+          <option value="">機器を選択</option>
+        </select>
+        <select id="et-sel-template" style="flex:2">
+          <option value="">テンプレートを選択</option>
+        </select>
+        <button type="button" class="btn btn-sm btn-pine" onclick="addEtEntry()">＋ 追加</button>
+      </div>
+      <div id="et-added-list"></div>
     </div>
     <div class="accordion" style="margin-bottom:12px">
       <div class="accordion-head" id="acc-insurance-head" onclick="toggleAccordion('insurance')">
@@ -576,15 +597,15 @@ textarea.expandable:focus {
             </label>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
           <input type="checkbox" id="v-electric-therapy" checked style="width:18px;height:18px;accent-color:var(--pine);flex-shrink:0;cursor:pointer">
           <label for="v-electric-therapy" style="font-size:14px;cursor:pointer">電療加算あり</label>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="checkbox" id="v-exclude-csv" style="width:18px;height:18px;accent-color:var(--red);flex-shrink:0;cursor:pointer">
-          <label for="v-exclude-csv" style="font-size:13px;color:var(--ink2);cursor:pointer;line-height:1.5">CSVから外す<span style="font-size:11px;color:var(--ink3);margin-left:4px">（一覧には表示・CSV出力の初期選択から除外）</span></label>
-        </div>
       </div>
+    </div>
+    <div class="fld" style="display:flex;align-items:center;gap:10px;padding:6px 0 2px">
+      <input type="checkbox" id="v-exclude-csv" style="width:18px;height:18px;accent-color:var(--red);flex-shrink:0;cursor:pointer">
+      <label for="v-exclude-csv" style="font-size:13px;color:var(--ink2);cursor:pointer;line-height:1.5">CSVから外す<span style="font-size:11px;color:var(--ink3);margin-left:4px">（一覧には表示・CSV出力の初期選択から除外）</span></label>
     </div>
     <button class="btn btn-pine btn-full" id="save-btn" onclick="saveRecord()" style="margin-top:4px">✓ 保存する</button>
   </div>
@@ -946,6 +967,22 @@ textarea.expandable:focus {
       </div>
     </div>
   </div>
+  <!-- 電療機器管理 -->
+  <div class="setting-accordion">
+    <div class="setting-accordion-head" onclick="toggleSettingAcc(this)">
+      ⚡ 電療機器管理<span class="sa-arrow">▼</span>
+    </div>
+    <div class="setting-accordion-body">
+      <div class="setting-accordion-inner">
+        <p style="font-size:12px;color:var(--ink3);margin-bottom:12px">機器ごとにテンプレートを管理します</p>
+        <div id="et-devices-list"></div>
+        <div class="setting-add-row" style="margin-top:10px">
+          <input type="text" id="new-et-device-name" placeholder="機器名（例：パルスマ）">
+          <button class="btn btn-pine btn-sm" onclick="addEtDevice()">機器を追加</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="panel-calendar" class="panel active" style="padding:0">
 <div style="background:var(--pine);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -1255,6 +1292,8 @@ var tools = [
   {name:'台座灸',unit:'個'},{name:'電子温灸',unit:'回'},
   {name:'パルス',unit:'回'},{name:'TENS',unit:'枚'},{name:'円皮鍼',unit:'個'}
 ];
+var etDevices = [];
+var _etAdded = [];
 var _editingPatientId=null, _editingRecordId=null;
 var symptomEntries=[];
 
@@ -1268,6 +1307,7 @@ renderToolsSettings();
 renderOtherMenuSelect();
 renderOtherMenuSettings();
 renderSymptomsChecks();
+renderEtDeviceSettings();
 
 /* ══ Firebase データ読み込み（loadイベントで実行） ══ */
 window.addEventListener('load', function(){
@@ -1284,12 +1324,14 @@ function loadLocalSettings(){
     var t=localStorage.getItem('harikyu_templates'); if(t) templates=JSON.parse(t);
     var tl=localStorage.getItem('harikyu_tools'); if(tl) tools=JSON.parse(tl);
     var om=localStorage.getItem('harikyu_other_menus'); if(om) otherMenus=JSON.parse(om);
+    var ed=localStorage.getItem('harikyu_et_devices'); if(ed) etDevices=JSON.parse(ed);
   }catch(e){}
 }
 function saveLocalSettings(){
   localStorage.setItem('harikyu_templates',JSON.stringify(templates));
   localStorage.setItem('harikyu_tools',JSON.stringify(tools));
   localStorage.setItem('harikyu_other_menus',JSON.stringify(otherMenus));
+  localStorage.setItem('harikyu_et_devices',JSON.stringify(etDevices));
 }
 
 /* ══ Firebase 操作 ══ */
@@ -1323,9 +1365,11 @@ async function fbLoadAll(){
       if(sdata.templates&&sdata.templates.length) templates=sdata.templates;
       if(sdata.otherMenus&&sdata.otherMenus.length) otherMenus=sdata.otherMenus;
       if(sdata.tools&&sdata.tools.length) tools=sdata.tools;
+      if(sdata.etDevices&&sdata.etDevices.length) etDevices=sdata.etDevices;
       renderTemplateSelect(); renderTemplateSettings();
       renderToolsList(); renderToolsSettings();
       renderOtherMenuSettings(); renderSymptomsChecks();
+      renderEtDeviceSettings();
       console.log('[Firebase] 設定読込完了');
     }
     /* パスワードをlocalStorageに同期 */
@@ -1339,7 +1383,7 @@ async function fbLoadAll(){
   }
 }
 async function fbSave(col,id,data){ if(!_db) return; try{ await _db.collection(col).doc(String(id)).set(data); }catch(e){ console.error('[Firebase] 保存エラー',e); } }
-async function fbSaveSettings(){ if(!_db) return; try{ await _db.collection('app_settings').doc('settings').set({templates:templates,otherMenus:otherMenus,tools:tools}); }catch(e){ console.error('[Firebase] 設定保存エラー',e); } }
+async function fbSaveSettings(){ if(!_db) return; try{ await _db.collection('app_settings').doc('settings').set({templates:templates,otherMenus:otherMenus,tools:tools,etDevices:etDevices}); }catch(e){ console.error('[Firebase] 設定保存エラー',e); } }
 async function fbDelete(col,id){ if(!_db) return; try{ await _db.collection(col).doc(String(id)).delete(); }catch(e){ console.error('[Firebase] 削除エラー',e); } }
 
 function fbBadge(type,msg){
@@ -1359,7 +1403,7 @@ function gotoTab(name){
   document.querySelectorAll('.main-tab')[TAB_NAMES.indexOf(name)].classList.add('active');
   if(name==='list') renderList();
   if(name==='roster') syncRosterSel();
-  if(name==='settings'){ renderTemplateSettings(); renderToolsSettings(); renderOtherMenuSettings(); }
+  if(name==='settings'){ renderTemplateSettings(); renderToolsSettings(); renderOtherMenuSettings(); renderEtDeviceSettings(); }
   if(name==='calendar'){ if(!_calInitDone){ calInit(); _calInitDone=true; } else { calRender(); } }
 }
 var SUB_NAMES=['view','manual','csv'];
@@ -1501,9 +1545,15 @@ function syncToolQty(){
   var qtySel=document.getElementById('tool-sel-qty');
   if(!qtySel) return;
   var t=tools.find(function(x){ return x.name===(nameSel?nameSel.value:''); });
-  var unit=t?t.unit:'個';
-  qtySel.innerHTML='';
-  for(var n=1;n<=30;n++){ var o=document.createElement('option'); o.value=String(n); o.textContent=n+unit; qtySel.appendChild(o); }
+  var unit=t?t.unit:'';
+  if(!unit){
+    qtySel.style.display='none';
+    qtySel.innerHTML='<option value="1">1</option>';
+  } else {
+    qtySel.style.display='';
+    qtySel.innerHTML='';
+    for(var n=1;n<=30;n++){ var o=document.createElement('option'); o.value=String(n); o.textContent=n+unit; qtySel.appendChild(o); }
+  }
 }
 function addToolEntry(){
   var nameSel=document.getElementById('tool-sel-name');
@@ -1524,7 +1574,8 @@ function removeToolEntry(name){
 function renderToolsAddedList(){
   var c=document.getElementById('tools-added-list'); if(!c) return;
   c.innerHTML=_toolsAdded.map(function(x){
-    return '<div class="tool-added-item"><span>'+esc(x.name)+' × '+esc(x.qty)+esc(x.unit)+'</span>'
+    var qtyLabel=x.unit?(' × '+esc(x.qty)+esc(x.unit)):'';
+    return '<div class="tool-added-item"><span>'+esc(x.name)+qtyLabel+'</span>'
       +'<button class="tool-added-del" onclick="removeToolEntry(\''+esc(x.name)+'\')">削除</button></div>';
   }).join('');
 }
@@ -1535,8 +1586,78 @@ function resetToolsInputs(){
   syncToolQty(); renderToolsAddedList();
 }
 function setToolsInputs(used){
-  _toolsAdded=used?used.map(function(u){ return {name:u.name,qty:u.qty||'1',unit:u.unit||'個'}; }):[];
+  _toolsAdded=used?used.map(function(u){ return {name:u.name,qty:u.qty||'1',unit:u.unit||''}; }):[];
   renderToolsAddedList();
+}
+
+/* ══ 電療機器 ══ */
+function renderEtDeviceSelect(){
+  var sel=document.getElementById('et-sel-device'); if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">機器を選択</option>';
+  etDevices.forEach(function(d){
+    var o=document.createElement('option'); o.value=d.name; o.textContent=d.name; sel.appendChild(o);
+  });
+  if(cur) sel.value=cur;
+  syncEtTemplates();
+}
+function syncEtTemplates(){
+  var devSel=document.getElementById('et-sel-device');
+  var tplSel=document.getElementById('et-sel-template');
+  if(!tplSel) return;
+  var devName=devSel?devSel.value:'';
+  var dev=etDevices.find(function(d){return d.name===devName;});
+  tplSel.innerHTML='<option value="">テンプレートを選択</option>';
+  if(dev&&dev.templates&&dev.templates.length){
+    dev.templates.forEach(function(t){
+      var o=document.createElement('option'); o.value=t; o.textContent=t; tplSel.appendChild(o);
+    });
+  }
+}
+function addEtEntry(){
+  var devSel=document.getElementById('et-sel-device');
+  var tplSel=document.getElementById('et-sel-template');
+  var devName=devSel?devSel.value:'';
+  var tplVal=tplSel?tplSel.value:'';
+  if(!devName){toast('機器を選択してください','ng');return;}
+  var ei=_toolsAdded.findIndex(function(x){return x.name===devName;});
+  if(ei>=0){ _toolsAdded[ei].qty='1'; } else { _toolsAdded.push({name:devName,qty:'1',unit:''}); }
+  renderToolsAddedList();
+  if(tplVal){
+    var treatEl=document.getElementById('v-treatment');
+    var cur=treatEl.value.trim();
+    treatEl.value=cur?cur+'\n'+tplVal:tplVal;
+  }
+  var etChk=document.getElementById('v-electric-therapy');
+  if(etChk) etChk.checked=true;
+  var existing=_etAdded.findIndex(function(x){return x.device===devName;});
+  if(existing>=0){ _etAdded[existing].template=tplVal; } else { _etAdded.push({device:devName,template:tplVal}); }
+  renderEtAddedList();
+  if(devSel) devSel.value='';
+  syncEtTemplates();
+}
+function removeEtEntry(devName){
+  _etAdded=_etAdded.filter(function(x){return x.device!==devName;});
+  _toolsAdded=_toolsAdded.filter(function(x){return x.name!==devName;});
+  renderEtAddedList();
+  renderToolsAddedList();
+}
+function renderEtAddedList(){
+  var c=document.getElementById('et-added-list'); if(!c) return;
+  c.innerHTML=_etAdded.map(function(x){
+    return '<div class="tool-added-item"><span>'+esc(x.device)+(x.template?' ／ '+esc(x.template):'')+'</span>'
+      +'<button class="tool-added-del" onclick="removeEtEntry(\''+esc(x.device)+'\')">削除</button></div>';
+  }).join('');
+}
+function resetEtInputs(){
+  _etAdded=[];
+  var s=document.getElementById('et-sel-device'); if(s) s.value='';
+  syncEtTemplates();
+  renderEtAddedList();
+}
+function setEtInputs(etAdded){
+  _etAdded=etAdded?etAdded.slice():[];
+  renderEtAddedList();
 }
 
 /* ══ 訪問記録 ══ */
@@ -1587,6 +1708,7 @@ function onVisitPatientChange(){
   }
   /* 使用道具 */
   if(prev.toolsUsed&&prev.toolsUsed.length){ setToolsInputs(prev.toolsUsed); }
+  setEtInputs(prev.etUsed||[]);
 
   /* 随伴症状ヘッダーに前回内容を表示 */
   var sympPrevEl=document.getElementById('acc-symptoms-prev');
@@ -1662,7 +1784,7 @@ function saveRecord(){
   var pulsePressure=(bpSys&&bpDia)?String(parseInt(bpSys)-parseInt(bpDia)):'';
   var vitals={bpSys:bpSys,bpDia:bpDia,pulsePressure:pulsePressure,pulse:pulse,temp:temp};
   var excludeCsv=document.getElementById('v-exclude-csv').checked;
-  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,chiefStatus:chiefStatus,symptoms:sympText,symptomEntries:symptomEntries.slice(),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed(),excludeFromCsv:excludeCsv,bodyParts:getBodyParts(),therapyType:document.querySelector('input[name="v-therapy"]:checked').value,electricTherapy:document.getElementById('v-electric-therapy').checked};
+  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,chiefStatus:chiefStatus,symptoms:sympText,symptomEntries:symptomEntries.slice(),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed(),etUsed:_etAdded.slice(),excludeFromCsv:excludeCsv,bodyParts:getBodyParts(),therapyType:document.querySelector('input[name="v-therapy"]:checked').value,electricTherapy:document.getElementById('v-electric-therapy').checked};
   if(_editingRecordId!==null){
     var idx=records.findIndex(function(r){return r._id===_editingRecordId;});
     if(idx>=0){ recData._id=_editingRecordId; records[idx]=recData; fbSave('records',recData._id,recData); toast('記録を更新しました','ok'); }
@@ -1693,7 +1815,11 @@ function getBodyParts(){
 }
 function updateBodyPartsBadge(){
   var parts=getBodyParts();
-  var badge=document.getElementById('acc-insurance-badge');
+  var badge=document.getElementById('acc-bodyparts-badge');
+  if(badge){ badge.style.display=parts.length?'':'none'; badge.textContent=parts.length+'部位'; }
+  var prevEl=document.getElementById('acc-bodyparts-prev');
+  if(prevEl&&parts.length){ prevEl.textContent=parts.join('・'); prevEl.style.display='inline'; }
+  else if(prevEl){ prevEl.style.display='none'; }
 }
 function resetBodyParts(){
   document.querySelectorAll('#v-body-parts input[type=checkbox]').forEach(function(cb){
@@ -1715,6 +1841,7 @@ function resetVisitForm(){
   ['v-bp-sys','v-bp-dia','v-pulse','v-temp'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('v-pulse-pressure').textContent='脈圧：入力待ち';
   updateSymptomsBadge(); resetToolsInputs();
+  resetEtInputs();
   resetBodyParts();
   document.getElementById('v-therapy-2').checked=true;
   document.getElementById('v-electric-therapy').checked=true;
@@ -1734,6 +1861,7 @@ function editRecord(id){
   /* バイタル */
   if(r.vitals){ document.getElementById('v-bp-sys').value=r.vitals.bpSys||''; document.getElementById('v-bp-dia').value=r.vitals.bpDia||''; document.getElementById('v-pulse').value=r.vitals.pulse||''; document.getElementById('v-temp').value=r.vitals.temp||''; calcPulsePressure(); }
   if(r.toolsUsed&&r.toolsUsed.length){ setToolsInputs(r.toolsUsed); }
+  setEtInputs(r.etUsed||[]);
   document.getElementById('v-exclude-csv').checked=r.excludeFromCsv||false;
   /* 施術部位 */
   resetBodyParts();
@@ -2418,9 +2546,85 @@ function addTemplate(){ var val=document.getElementById('new-template-input').va
 function removeTemplate(i){ var name=templates[i]; templates.splice(i,1); fbSaveSettings(); renderTemplateSelect(); renderTemplateSettings(); toast('"'+name+'" を削除しました','ok'); }
 function moveTemplate(i,dir){ var j=i+dir; if(j<0||j>=templates.length) return; var tmp=templates[i]; templates[i]=templates[j]; templates[j]=tmp; fbSaveSettings(); renderTemplateSelect(); renderTemplateSettings(); }
 function renderToolsSettings(){ var c=document.getElementById('tools-setting-list'); if(!c) return; if(!tools.length){c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">道具が登録されていません</p>';return;} c.innerHTML=tools.map(function(t,i){return '<div class="setting-list-item"><span>'+esc(t.name)+'　<span style="color:var(--ink3);font-size:12px">単位：'+esc(t.unit)+'</span></span><div style="display:flex;gap:4px"><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTool('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button><button class="btn btn-sm" style="padding:6px 10px" onclick="moveTool('+i+',1)" '+(i===tools.length-1?'disabled':'')+'>↓</button><button class="btn btn-sm btn-red" onclick="removeTool('+i+')">削除</button></div></div>';}).join(''); }
-function addTool(){ var name=document.getElementById('new-tool-name').value.trim(), unit=document.getElementById('new-tool-unit').value.trim()||'個'; if(!name){toast('道具名を入力してください','ng');return;} tools.push({name:name,unit:unit}); document.getElementById('new-tool-name').value=''; document.getElementById('new-tool-unit').value=''; fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を追加しました','ok'); }
+function addTool(){ var name=document.getElementById('new-tool-name').value.trim(), unit=document.getElementById('new-tool-unit').value.trim(); if(!name){toast('道具名を入力してください','ng');return;} tools.push({name:name,unit:unit}); document.getElementById('new-tool-name').value=''; document.getElementById('new-tool-unit').value=''; fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を追加しました','ok'); }
 function removeTool(i){ var name=tools[i].name; if(!confirm('"'+name+'" を削除しますか？')) return; tools.splice(i,1); fbSaveSettings(); renderToolsList(); renderToolsSettings(); toast('"'+name+'" を削除しました','ok'); }
 function moveTool(i,dir){ var j=i+dir; if(j<0||j>=tools.length) return; var tmp=tools[i]; tools[i]=tools[j]; tools[j]=tmp; fbSaveSettings(); renderToolsList(); renderToolsSettings(); }
+
+/* ══ 電療機器設定 ══ */
+function renderEtDeviceSettings(){
+  var c=document.getElementById('et-devices-list'); if(!c) return;
+  if(!etDevices.length){
+    c.innerHTML='<p style="font-size:13px;color:var(--ink3);padding:8px 0">機器が登録されていません</p>';
+    renderEtDeviceSelect(); return;
+  }
+  c.innerHTML=etDevices.map(function(dev,di){
+    var tplHtml=dev.templates&&dev.templates.length
+      ?dev.templates.map(function(t,ti){
+          return '<div class="setting-list-item" style="padding:6px 0 6px 12px;font-size:13px">'
+            +'<span>'+esc(t)+'</span>'
+            +'<div style="display:flex;gap:4px">'
+            +'<button class="btn btn-sm" style="padding:4px 8px" onclick="moveEtTemplate('+di+','+ti+',-1)" '+(ti===0?'disabled':'')+'>↑</button>'
+            +'<button class="btn btn-sm" style="padding:4px 8px" onclick="moveEtTemplate('+di+','+ti+',1)" '+(ti===dev.templates.length-1?'disabled':'')+'>↓</button>'
+            +'<button class="btn btn-sm btn-red" style="padding:4px 8px" onclick="removeEtTemplate('+di+','+ti+')">削除</button>'
+            +'</div></div>';
+        }).join('')
+      :'<div style="font-size:12px;color:var(--ink3);padding:4px 0 4px 12px">テンプレートなし</div>';
+    return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px;overflow:hidden">'
+      +'<div style="background:var(--paper2);padding:10px 12px;display:flex;align-items:center;justify-content:space-between">'
+      +'<span style="font-weight:700;font-size:14px">⚡ '+esc(dev.name)+'</span>'
+      +'<div style="display:flex;gap:4px">'
+      +'<button class="btn btn-sm" style="padding:4px 8px" onclick="moveEtDevice('+di+',-1)" '+(di===0?'disabled':'')+'>↑</button>'
+      +'<button class="btn btn-sm" style="padding:4px 8px" onclick="moveEtDevice('+di+',1)" '+(di===etDevices.length-1?'disabled':'')+'>↓</button>'
+      +'<button class="btn btn-sm btn-red" style="padding:4px 8px" onclick="removeEtDevice('+di+')">削除</button>'
+      +'</div></div>'
+      +tplHtml
+      +'<div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:8px">'
+      +'<input type="text" id="new-et-tpl-'+di+'" placeholder="テンプレートを入力" style="flex:1;padding:7px 10px;font-size:14px;border:1.5px solid var(--border2);border-radius:var(--r-sm)">'
+      +'<button class="btn btn-pine btn-sm" onclick="addEtTemplate('+di+')">追加</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+  renderEtDeviceSelect();
+}
+function addEtDevice(){
+  var name=document.getElementById('new-et-device-name').value.trim();
+  if(!name){toast('機器名を入力してください','ng');return;}
+  if(etDevices.find(function(d){return d.name===name;})){toast('すでに登録済みです','ng');return;}
+  etDevices.push({name:name,templates:[]});
+  document.getElementById('new-et-device-name').value='';
+  fbSaveSettings(); renderEtDeviceSettings(); toast('"'+name+'" を追加しました','ok');
+}
+function removeEtDevice(di){
+  var name=etDevices[di].name;
+  if(!confirm('"'+name+'" を削除しますか？')) return;
+  etDevices.splice(di,1);
+  fbSaveSettings(); renderEtDeviceSettings(); toast('"'+name+'" を削除しました','ok');
+}
+function moveEtDevice(di,dir){
+  var j=di+dir; if(j<0||j>=etDevices.length) return;
+  var tmp=etDevices[di]; etDevices[di]=etDevices[j]; etDevices[j]=tmp;
+  fbSaveSettings(); renderEtDeviceSettings();
+}
+function addEtTemplate(di){
+  var inp=document.getElementById('new-et-tpl-'+di);
+  if(!inp) return;
+  var val=inp.value.trim();
+  if(!val){toast('テンプレートを入力してください','ng');return;}
+  etDevices[di].templates.push(val);
+  inp.value='';
+  fbSaveSettings(); renderEtDeviceSettings(); toast('テンプレートを追加しました','ok');
+}
+function removeEtTemplate(di,ti){
+  var name=etDevices[di].templates[ti];
+  if(!confirm('"'+name+'" を削除しますか？')) return;
+  etDevices[di].templates.splice(ti,1);
+  fbSaveSettings(); renderEtDeviceSettings(); toast('テンプレートを削除しました','ok');
+}
+function moveEtTemplate(di,ti,dir){
+  var j=ti+dir; if(j<0||j>=etDevices[di].templates.length) return;
+  var tmp=etDevices[di].templates[ti]; etDevices[di].templates[ti]=etDevices[di].templates[j]; etDevices[di].templates[j]=tmp;
+  fbSaveSettings(); renderEtDeviceSettings();
+}
 
 /* ══ その他症状メニュー ══ */
 function renderOtherMenuSelect(){ var s=document.getElementById('v-other-sel'); if(!s) return; s.innerHTML='<option value="">メニューから追加</option>'; otherMenus.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; s.appendChild(o); }); }
