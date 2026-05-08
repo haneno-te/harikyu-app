@@ -402,6 +402,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .daylist-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:1.5px dashed var(--border2);border-radius:var(--r-sm);background:transparent;color:var(--ink3);font-size:14px;font-weight:700;width:100%;margin-top:4px;transition:background .13s,border-color .13s,color .13s}
 .daylist-add-btn:hover{background:var(--pine-pale);border-color:var(--pine-mid);color:var(--pine)}
 
+textarea.expandable {
+  transition: min-height 0.3s ease;
+  min-height: 72px;
+}
+textarea.expandable:focus {
+  min-height: 220px !important;
+}
+
 </style>
 </head>
 <body>
@@ -521,11 +529,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
     <div class="fld">
       <label class="fld-label" for="v-treatment">施術内容</label>
-      <textarea id="v-treatment" placeholder="施術内容を入力（音声入力も使えます）"></textarea>
+      <textarea id="v-treatment" class="expandable" placeholder="施術内容を入力（音声入力も使えます）"></textarea>
     </div>
     <div class="fld">
       <label class="fld-label" for="v-memo">所見・メモ</label>
-      <textarea id="v-memo" placeholder="気になること、変化など" style="min-height:64px"></textarea>
+      <textarea id="v-memo" class="expandable" placeholder="気になること、変化など" style="min-height:64px"></textarea>
     </div>
     <div class="fld">
       <label class="fld-label">使用道具</label>
