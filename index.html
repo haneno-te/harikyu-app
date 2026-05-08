@@ -536,6 +536,21 @@ textarea.expandable:focus {
       <textarea id="v-memo" class="expandable" placeholder="気になること、変化など" style="min-height:64px"></textarea>
     </div>
     <div class="fld">
+      <label class="fld-label">施術部位</label>
+      <div id="v-body-parts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+        <label class="chk-item"><input type="checkbox" value="頭部" onchange="updateBodyPartsBadge()">頭部</label>
+        <label class="chk-item"><input type="checkbox" value="耳介" onchange="updateBodyPartsBadge()">耳介</label>
+        <label class="chk-item"><input type="checkbox" value="頸部" onchange="updateBodyPartsBadge()">頸部</label>
+        <label class="chk-item"><input type="checkbox" value="上肢" onchange="updateBodyPartsBadge()">上肢</label>
+        <label class="chk-item"><input type="checkbox" value="下肢" onchange="updateBodyPartsBadge()">下肢</label>
+        <label class="chk-item"><input type="checkbox" value="胸部" onchange="updateBodyPartsBadge()">胸部</label>
+        <label class="chk-item"><input type="checkbox" value="腹部" onchange="updateBodyPartsBadge()">腹部</label>
+        <label class="chk-item"><input type="checkbox" value="背部" onchange="updateBodyPartsBadge()">背部</label>
+        <label class="chk-item"><input type="checkbox" value="全身" onchange="updateBodyPartsBadge()">全身</label>
+        <label class="chk-item"><input type="checkbox" value="その他" onchange="updateBodyPartsBadge()">その他</label>
+      </div>
+    </div>
+    <div class="fld">
       <label class="fld-label">使用道具</label>
       <div class="tools-row">
         <select id="tool-sel-name" onchange="syncToolQty()"><option value="">道具を選択</option></select>
@@ -544,9 +559,32 @@ textarea.expandable:focus {
       </div>
       <div id="tools-added-list"></div>
     </div>
-    <div class="fld" style="display:flex;align-items:center;gap:10px;padding:6px 0 2px">
-      <input type="checkbox" id="v-exclude-csv" style="width:18px;height:18px;accent-color:var(--red);flex-shrink:0;cursor:pointer">
-      <label for="v-exclude-csv" style="font-size:13px;color:var(--ink2);cursor:pointer;line-height:1.5">CSVから外す<span style="font-size:11px;color:var(--ink3);margin-left:4px">（一覧には表示・CSV出力の初期選択から除外）</span></label>
+    <div class="accordion" style="margin-bottom:12px">
+      <div class="accordion-head" id="acc-insurance-head" onclick="toggleAccordion('insurance')">
+        <span>保険請求区分<span class="acc-badge" id="acc-insurance-badge" style="display:none"></span></span>
+        <span class="accordion-arrow">▼</span>
+      </div>
+      <div class="accordion-body" id="acc-insurance-body">
+        <div style="margin-bottom:12px">
+          <div class="fld-label" style="margin-bottom:8px">療区分</div>
+          <div style="display:flex;gap:20px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer">
+              <input type="radio" name="v-therapy" value="1" id="v-therapy-1" style="width:18px;height:18px;accent-color:var(--pine)">１療（鍼 or 灸）
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:15px;cursor:pointer">
+              <input type="radio" name="v-therapy" value="2" id="v-therapy-2" checked style="width:18px;height:18px;accent-color:var(--pine)">２療（鍼灸）
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <input type="checkbox" id="v-electric-therapy" checked style="width:18px;height:18px;accent-color:var(--pine);flex-shrink:0;cursor:pointer">
+          <label for="v-electric-therapy" style="font-size:14px;cursor:pointer">電療加算あり</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" id="v-exclude-csv" style="width:18px;height:18px;accent-color:var(--red);flex-shrink:0;cursor:pointer">
+          <label for="v-exclude-csv" style="font-size:13px;color:var(--ink2);cursor:pointer;line-height:1.5">CSVから外す<span style="font-size:11px;color:var(--ink3);margin-left:4px">（一覧には表示・CSV出力の初期選択から除外）</span></label>
+        </div>
+      </div>
     </div>
     <button class="btn btn-pine btn-full" id="save-btn" onclick="saveRecord()" style="margin-top:4px">✓ 保存する</button>
   </div>
@@ -1586,6 +1624,19 @@ function onVisitPatientChange(){
   /* バナー表示 */
   document.getElementById('rec-prefill-banner-text').textContent='📋 前回記録（'+prev.date+'）を読み込みました';
   prefillBanner.style.display='flex';
+  /* 施術部位プレロード */
+  resetBodyParts();
+  if(prev.bodyParts&&prev.bodyParts.length){
+    prev.bodyParts.forEach(function(v){
+      var cb=document.querySelector('#v-body-parts input[value="'+v+'"]');
+      if(cb) cb.checked=true;
+    });
+  }
+  /* 療区分・電療プレロード */
+  var prevTherapy=prev.therapyType||'2';
+  var prevTherapyRadio=document.querySelector('input[name="v-therapy"][value="'+prevTherapy+'"]');
+  if(prevTherapyRadio) prevTherapyRadio.checked=true;
+  document.getElementById('v-electric-therapy').checked=(prev.electricTherapy!==false);
 }
 function saveRecord(){
   var pid=document.getElementById('v-patient').value;
@@ -1611,7 +1662,7 @@ function saveRecord(){
   var pulsePressure=(bpSys&&bpDia)?String(parseInt(bpSys)-parseInt(bpDia)):'';
   var vitals={bpSys:bpSys,bpDia:bpDia,pulsePressure:pulsePressure,pulse:pulse,temp:temp};
   var excludeCsv=document.getElementById('v-exclude-csv').checked;
-  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,chiefStatus:chiefStatus,symptoms:sympText,symptomEntries:symptomEntries.slice(),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed(),excludeFromCsv:excludeCsv};
+  var recData={date:date,patientId:pid,displayName:pt?displayName(pt):pid,condition:cond,progress:prog,chiefStatus:chiefStatus,symptoms:sympText,symptomEntries:symptomEntries.slice(),treatment:treat,memo:memo,vitals:vitals,toolsUsed:getToolsUsed(),excludeFromCsv:excludeCsv,bodyParts:getBodyParts(),therapyType:document.querySelector('input[name="v-therapy"]:checked').value,electricTherapy:document.getElementById('v-electric-therapy').checked};
   if(_editingRecordId!==null){
     var idx=records.findIndex(function(r){return r._id===_editingRecordId;});
     if(idx>=0){ recData._id=_editingRecordId; records[idx]=recData; fbSave('records',recData._id,recData); toast('記録を更新しました','ok'); }
@@ -1634,6 +1685,21 @@ function saveRecord(){
   }
   resetVisitForm(); renderList(); setTimeout(function(){gotoTab('calendar');calRender();},350);
 }
+function getBodyParts(){
+  return Array.prototype.map.call(
+    document.querySelectorAll('#v-body-parts input[type=checkbox]:checked'),
+    function(cb){ return cb.value; }
+  );
+}
+function updateBodyPartsBadge(){
+  var parts=getBodyParts();
+  var badge=document.getElementById('acc-insurance-badge');
+}
+function resetBodyParts(){
+  document.querySelectorAll('#v-body-parts input[type=checkbox]').forEach(function(cb){
+    cb.checked=false;
+  });
+}
 function resetVisitForm(){
   document.getElementById('v-patient').value=''; document.getElementById('visit-ptinfo').style.display='none';
   var pb=document.getElementById('rec-prefill-banner'); if(pb) pb.style.display='none';
@@ -1649,6 +1715,9 @@ function resetVisitForm(){
   ['v-bp-sys','v-bp-dia','v-pulse','v-temp'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('v-pulse-pressure').textContent='脈圧：入力待ち';
   updateSymptomsBadge(); resetToolsInputs();
+  resetBodyParts();
+  document.getElementById('v-therapy-2').checked=true;
+  document.getElementById('v-electric-therapy').checked=true;
 }
 function editRecord(id){
   var r=records.find(function(x){return x._id===id;}); if(!r) return;
@@ -1666,6 +1735,19 @@ function editRecord(id){
   if(r.vitals){ document.getElementById('v-bp-sys').value=r.vitals.bpSys||''; document.getElementById('v-bp-dia').value=r.vitals.bpDia||''; document.getElementById('v-pulse').value=r.vitals.pulse||''; document.getElementById('v-temp').value=r.vitals.temp||''; calcPulsePressure(); }
   if(r.toolsUsed&&r.toolsUsed.length){ setToolsInputs(r.toolsUsed); }
   document.getElementById('v-exclude-csv').checked=r.excludeFromCsv||false;
+  /* 施術部位 */
+  resetBodyParts();
+  if(r.bodyParts&&r.bodyParts.length){
+    r.bodyParts.forEach(function(v){
+      var cb=document.querySelector('#v-body-parts input[value="'+v+'"]');
+      if(cb) cb.checked=true;
+    });
+  }
+  /* 療区分・電療 */
+  var therapyVal=r.therapyType||'2';
+  var therapyRadio=document.querySelector('input[name="v-therapy"][value="'+therapyVal+'"]');
+  if(therapyRadio) therapyRadio.checked=true;
+  document.getElementById('v-electric-therapy').checked=(r.electricTherapy!==false);
   updateSymptomsBadge();
   document.getElementById('rec-edit-banner-text').textContent=r.date+' / '+(r.displayName||r.patientId)+' の記録を編集中';
   document.getElementById('rec-edit-banner').classList.add('show'); document.getElementById('save-btn').textContent='✓ 更新する';
@@ -2162,11 +2244,15 @@ function exportCSV(recs){
   recs.forEach(function(r){ if(r.toolsUsed&&r.toolsUsed.length>maxTools) maxTools=r.toolsUsed.length; });
   var H=['日付','患者ID','表示名','体調','主訴状況','経過','随伴症状','施術内容','メモ','血圧上','血圧下','脈圧','脈拍','体温'];
   for(var t=1;t<=maxTools;t++){ H.push('道具'+t+'名称'); H.push('道具'+t+'数量'); }
+  H.push('施術部位','療区分','電療加算');
   var rows=recs.map(function(r){
     var v=r.vitals||{};
     var row=[r.date||'',r.patientId||'',r.displayName||r.patientId||'',r.condition||'',r.chiefStatus||'',r.progress||'',r.symptoms||'',r.treatment||'',r.memo||'',v.bpSys||'',v.bpDia||'',v.pulsePressure||'',v.pulse||'',v.temp||''];
     var tools=r.toolsUsed||[];
     for(var i=0;i<maxTools;i++){ row.push(tools[i]?tools[i].name:''); row.push(tools[i]&&tools[i].qty?tools[i].qty:''); }
+    row.push((r.bodyParts||[]).join('・'));
+    row.push(r.therapyType==='1'?'１療':'２療');
+    row.push(r.electricTherapy===false?'':'○');
     return row.map(function(v){return '"'+String(v).replace(/\r?\n/g,'／').replace(/"/g,'""')+'"';});
   });
   var csv='\uFEFF'+[H].concat(rows).map(function(r){return r.join(',');}).join('\r\n');
