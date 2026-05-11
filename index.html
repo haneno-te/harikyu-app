@@ -2116,17 +2116,6 @@ function toggleRecDetail(id){
   var btn=document.getElementById('rdb-'+id);
   if(btn) btn.textContent=open?'確認':'閉じる';
 }
-function isRecordRecorded(r){
-  return schedules.some(function(s){return s.patientId===r.patientId && s.date===r.date && s.recorded;});
-}
-function toggleRecorded(id){
-  var r=records.find(function(x){return x._id===id;}); if(!r) return;
-  var newVal=!isRecordRecorded(r);
-  schedules.forEach(function(s){
-    if(s.patientId===r.patientId && s.date===r.date){ s.recorded=newVal; fbSave('schedules',s._id,s); }
-  });
-  renderList(); calRender();
-}
 function recRowHtml(r, showName, showDate){
   var pt=patients.find(function(p){return p.id===r.patientId;});
   var ptLabel=pt?displayName(pt):(r.displayName||r.patientId);
@@ -2138,12 +2127,10 @@ function recRowHtml(r, showName, showDate){
   if(showName&&showDate) leftHtml='<div class="pt-id-label" style="font-size:13px;font-weight:600">'+esc(ptLabel)+'</div><div style="font-size:11px;color:var(--ink2)">'+fmtYmd(r.date)+'　'+visitNoTxt+'</div>';
   else if(showName)      leftHtml='<div class="pt-id-label" style="font-size:13px;font-weight:600">'+esc(ptLabel)+(visitNoTxt?'　'+visitNoTxt:'')+'</div>';
   else if(showDate)      leftHtml='<div style="font-size:13px;font-weight:600">'+fmtYmd(r.date)+'</div><div style="margin-top:2px">'+visitNoTxt+'</div>';
-  var isRec=isRecordRecorded(r);
-  var toggleBtn='<button class="btn btn-sm" style="padding:3px 8px;font-size:14px" onclick="toggleRecorded(\''+esc(r._id)+'\')">'+(isRec?'✅':'⬜')+'</button>';
   return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);margin:4px 0;overflow:hidden">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--paper)">'
     +'<div>'+leftHtml+'</div>'
-    +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+toggleBtn+condBadge
+    +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+condBadge
     +'<button id="rdb-'+esc(r._id)+'" class="btn btn-sm" style="padding:3px 8px;font-size:12px;background:var(--paper2);border:1px solid var(--border2)" onclick="toggleRecDetail(\''+esc(r._id)+'\')">確認</button>'
     +'<button class="btn btn-sm btn-amber" style="padding:3px 8px;font-size:12px" onclick="editRecord(\''+esc(r._id)+'\')">編集</button>'
     +'<button class="btn btn-sm btn-red" style="padding:3px 8px;font-size:12px" onclick="deleteRecord(\''+esc(r._id)+'\')">削除</button>'
@@ -2156,41 +2143,38 @@ function renderList(){
   var filtered=fp?records.filter(function(r){return r.patientId===fp;}):records;
   document.getElementById('rec-count').textContent=filtered.length;
   if(!filtered.length){ c.innerHTML='<div class="empty"><div class="empty-icon">📋</div>記録がありません</div>'; return; }
-  var sortDesc=function(a,b){return a.date>b.date?-1:a.date<b.date?1:0;};
-  var unrec=filtered.filter(function(r){return !isRecordRecorded(r);}).sort(sortDesc);
-  var rec=filtered.filter(function(r){return isRecordRecorded(r);}).sort(sortDesc);
-  var groupByDate=function(recs){
-    var byDate={},dateOrder=[];
-    recs.forEach(function(r){var d=r.date||'—';if(!byDate[d]){byDate[d]=[];dateOrder.push(d);}byDate[d].push(r);});
-    return {byDate:byDate,dateOrder:dateOrder};
-  };
+
   if(fp){
-    /* ── 患者指定：未記録→記録済み順、記録済みはグレーアウト ── */
+    /* ── 患者指定：患者名ヘッダー固定 ＋ 日付・回数行 ── */
     var pt=patients.find(function(p){return p.id===fp;});
     var ptLabel=pt?displayName(pt):fp;
+    var sorted=filtered.slice().sort(function(a,b){ return a.date>b.date?-1:a.date<b.date?1:0; });
     c.innerHTML='<div style="position:sticky;top:0;z-index:10;background:var(--pine);color:#fff;padding:9px 12px;font-weight:700;font-size:13px;border-radius:var(--r-sm) var(--r-sm) 0 0;">'
-      +'👤 '+esc(ptLabel)+'<span style="font-weight:400;font-size:12px;margin-left:8px;opacity:.8">'+filtered.length+'件</span>'
+      +'👤 '+esc(ptLabel)+'<span style="font-weight:400;font-size:12px;margin-left:8px;opacity:.8">'+sorted.length+'件</span>'
       +'</div>'
       +'<div style="padding:6px 0">'
-      +unrec.map(function(r){return recRowHtml(r,false,true);}).join('')
-      +rec.map(function(r){return '<div style="opacity:0.5">'+recRowHtml(r,false,true)+'</div>';}).join('')
+      +sorted.map(function(r){ return recRowHtml(r,false,true); }).join('')
       +'</div>';
   } else {
-    /* ── 全患者：未記録グループ（日付降順）→ 記録済みグループ（日付降順・グレーアウト） ── */
-    var ug=groupByDate(unrec), rg=groupByDate(rec);
-    var renderGroups=function(g,gray){
-      return g.dateOrder.map(function(d){
-        var ymd=fmtYmd(d), rs=g.byDate[d];
-        return '<div style="margin-top:12px'+(gray?';opacity:0.5':'')+'">'
-          +'<div style="background:var(--pine);color:#fff;padding:7px 12px;border-radius:var(--r-sm) var(--r-sm) 0 0;font-weight:700;font-size:13px">'
-          +'📅 '+ymd+'<span style="font-weight:400;font-size:12px;margin-left:8px;opacity:.8">'+rs.length+'件</span>'
-          +'</div>'
-          +'<div style="padding:4px 0">'
-          +rs.map(function(r){return recRowHtml(r,true,false);}).join('')
-          +'</div></div>';
-      }).join('');
-    };
-    c.innerHTML=renderGroups(ug,false)+renderGroups(rg,true);
+    /* ── 全患者：日付ヘッダー ＋ 患者行（名前表示・日付なし） ── */
+    var sorted=filtered.slice().sort(function(a,b){ return a.date>b.date?-1:a.date<b.date?1:0; });
+    var byDate={}, dateOrder=[];
+    sorted.forEach(function(r){
+      var d=r.date||'—';
+      if(!byDate[d]){ byDate[d]=[]; dateOrder.push(d); }
+      byDate[d].push(r);
+    });
+    c.innerHTML=dateOrder.map(function(d){
+      var ymd=fmtYmd(d);
+      var recs=byDate[d];
+      return '<div style="margin-top:12px">'
+        +'<div style="background:var(--pine);color:#fff;padding:7px 12px;border-radius:var(--r-sm) var(--r-sm) 0 0;font-weight:700;font-size:13px">'
+        +'📅 '+ymd+'<span style="font-weight:400;font-size:12px;margin-left:8px;opacity:.8">'+recs.length+'件</span>'
+        +'</div>'
+        +'<div style="padding:4px 0">'
+        +recs.map(function(r){ return recRowHtml(r,true,false); }).join('')
+        +'</div></div>';
+    }).join('');
   }
 }
 
